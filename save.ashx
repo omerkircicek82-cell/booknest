@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="BookNestApi" %>
+﻿<%@ WebHandler Language="C#" Class="BookNestApi" %>
 using System;
 using System.IO;
 using System.Text;
@@ -100,7 +100,7 @@ public class BookNestApi : IHttpHandler {
     }
   }
   public void ProcessRequest(HttpContext c) {
-    c.Response.TrySkipIisCustomErrors=true;c.Response.ContentType="application/json";c.Response.ContentEncoding=Encoding.UTF8;c.Response.Cache.SetCacheability(HttpCacheability.NoCache);c.Response.Cache.SetNoStore();c.Response.Headers["X-Content-Type-Options"]="nosniff";
+    c.Response.TrySkipIisCustomErrors=true;c.Response.ContentType="application/json";c.Response.ContentEncoding=Encoding.UTF8;c.Response.Charset="utf-8";c.Response.Cache.SetCacheability(HttpCacheability.NoCache);c.Response.Cache.SetNoStore();c.Response.Headers["X-Content-Type-Options"]="nosniff";
     string action=c.Request.QueryString["action"]??"";
     try {
       if(c.Request.HttpMethod=="POST"&&c.Request.Headers["Origin"]!=null){Uri origin;if(!Uri.TryCreate(c.Request.Headers["Origin"],UriKind.Absolute,out origin)||origin.Authority!=c.Request.Url.Authority){Fail(c,403,"İstek kaynağı geçersiz.");return;}}

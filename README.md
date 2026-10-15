@@ -26,6 +26,12 @@ Bu hata, IIS'in istenen klasör için bir varsayılan belge açamadığını gö
 
 Klasör listesini göstermek bu uygulamanın başlangıç sayfası sorununu çözmez; site `index.html` ile açılmalıdır. Mevcut yönetici parolanızı ve sunucuya özel ayarlarınızı yeni `web.config` dosyasına aktarın; boş parola içeren örnekle kişisel yapılandırmanızı kaybetmeyin.
 
+## Türkçe karakterlerin bozulması
+
+Sayfadaki sabit yazılar düzgünken fiyat açıklaması veya İdefix adı `TanÄ±mlÄ±` / `Ä°defix` gibi görünüyorsa IIS'in handler kaynak dosyasını hangi kodlamayla derlediğini kontrol edin. Bu sürüm `save.ashx` dosyasını UTF-8 BOM ile saklar; `web.config` içindeki `globalization` kaynak dosyası, istek ve yanıt kodlamalarını UTF-8 olarak belirtir. JSON yanıtının charset değeri de açıkça UTF-8'dir.
+
+Mevcut siteye güncelleme yaparken `save.ashx` dosyasını yenileyin, kendi `web.config` dosyanızdaki `system.web` bölümüne paketteki `globalization` satırını ekleyin ve yönetici parolanızı koruyun. Dosyaları bir editörde yeniden kaydediyorsanız UTF-8 kullanın. IIS yapılandırma değişikliği uygulamayı yeniden başlatıp önbelleği temizler; tarayıcıda Ctrl+F5 yapın. Başlangıç içerikleri ve `App_Data` klasörünü mevcut kayıtlarınızın üzerine yazmayın. Daha önce bozuk kaydedilmiş içerikler varsa onları panelde ayrıca düzeltin; bu güncelleme kayıtlı metinleri otomatik dönüştürmez.
+
 ## Kitap bilgisini güncelleme
 
 Kitaplık bölümünde adı/yazarı veya mümkünse ISBN'yi girip **Bilgi çek** düğmesine basın. Google Books ve Open Library sonuçları kaynak, yazar, yayınevi ve ISBN ile gösterilir. Doğru baskıyı seçin. Varsayılan olarak yalnızca boş alanlar dolar; düzeltme yapmak için **Dolu alanların üzerine de yaz** seçeneğini işaretleyin. Ardından **Kaydet** düğmesine basın.
@@ -69,6 +75,6 @@ Tarayıcı testi `/usr/bin/chromium` gerektirir, geçici sunucu/veri/parola kull
 
 - Node API: 9 test geçti (fiyat ayrıştırma/eşleşme/sıralama, kaynak yedeği, erişim, kayıt ve yeniden başlatmada kalıcılık, yükleme, hız sınırı).
 - Chromium: giriş, kayıt/yenileme, bilgi seçimi, mevcut alanları koruma, fiyat yok durumu, en düşük fiyat bağlantısı, mobil taşma, çıkış kontrolleri geçti.
-- IIS handler C# kodu Mono derleyicisiyle derlendi; 10 bileşen kontrolü geçti (`test/IisTests.cs`). Bu gerçek Windows/IIS barındırma testi yerine geçmez.
+- IIS handler C# kodu Mono derleyicisiyle derlendi; 15 bileşen kontrolü geçti (`test/IisTests.cs`). Bu gerçek Windows/IIS barındırma testi yerine geçmez.
 - Bulut ağ politikasının 403 engeli nedeniyle Google/Open Library ve gerçek mağaza fiyatları canlı doğrulanamadı. Gerekli ağ alan adları ortam ayarları taslağına eklendi; taslak kaydı mevcut ağ politikasını değiştirmez.
 - `thebooknest.online` üzerinde herhangi bir dosya değişikliği veya yayın yapılmadı. Kitaplara doğrulanmamış bilgi/fiyat eklenmedi.
