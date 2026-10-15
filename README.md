@@ -34,21 +34,33 @@ Mevcut siteye güncelleme yaparken `save.ashx` dosyasını yenileyin, kendi `web
 
 ## Kitap bilgisini güncelleme
 
-Kitaplık bölümünde adı/yazarı veya mümkünse ISBN'yi girip **Bilgi çek** düğmesine basın. Google Books ve Open Library sonuçları kaynak, yazar, yayınevi ve ISBN ile gösterilir. Doğru baskıyı seçin. Varsayılan olarak yalnızca boş alanlar dolar; düzeltme yapmak için **Dolu alanların üzerine de yaz** seçeneğini işaretleyin. Ardından **Kaydet** düğmesine basın.
+Kitaplık → **Bilgi çek** penceresinde sorguyu, yazarı ve sonuç dilini değiştirebilirsiniz. Varsayılan **Türkçe baskılar** seçeneği açıkça yabancı dildeki baskıları eler; başka baskılar için **Tüm diller** seçilmelidir. Sonuçlar kendiliğinden uygulanmaz: başlık, yazar, dil, yayınevi ve ISBN'yi karşılaştırıp doğru baskıyı seçin. Dil kaynağın verisinde yoksa bu durum açıkça gösterilir.
 
-Toplu doldurma yalnızca ISBN ile eşleşen kayıtları kullanır; yanlış baskıları ilk arama sonucu üzerinden otomatik atamaz. Kaynakların içermediği açıklama veya sayfa sayısı boş kalır ve elle düzenlenebilir. Open Library ilk yayın yılı döndürebilir; baskı yılını kaydetmeden kontrol edin.
+Google Books önce başlık/yazar ve Türkçe dil kısıtıyla aranır. Open Library'de eser düzeyindeki karışık ISBN listeleri yerine gerçek baskı kayıtları kullanılır. Kataloglarda eşleşme bulunamazsa Kitapyurdu ürün araması denenir. Bir kitabın mağazada satılması, bu kataloglarda kaydının bulunduğu anlamına gelmez. Google'ın HTTP 429 sorgu kotası hatası ve mağazanın HTTP 403 erişim engeli **kitap bulunamadı** ile aynı durum değildir; panel kaynak hatalarını gösterir.
 
-Sunucudan `www.googleapis.com` ve `openlibrary.org` HTTPS erişimi gerekir. Kapaklar için ziyaretçi tarayıcısının `covers.openlibrary.org`, `books.google.com` veya kaynağın verdiği kapak alan adına erişmesi gerekir. Kota/ağ hatalarında eldeki bilgiler korunur ve panel hata gösterir.
+Doğru ürünün HTTPS adresini de arama alanına yapıştırabilirsiniz: D&R, Kitapyurdu, BKM Kitap veya İdefix. Ürün sayfası erişilebilir ve yapılandırılmış kitap verisi içeriyorsa ISBN, açıklama, sayfa sayısı, yayınevi ve kapak bilgisi içe aktarılır. Mağaza sonucu seçildiğinde fiyat bağlantısı da kitaba eklenir. Kaynağın fiyatı/ISBN'si arama sayfasından tahmin edilmez.
+
+Varsayılan olarak yalnızca boş alanlar dolar. Önceden yanlış doldurulmuş bir alanı düzeltmek için **Dolu alanların üzerine de yaz (ISBN ve baskı dahil)** kutusunu işaretleyin. Farklı ISBN'ye geçerken onay istenir ve önceki baskının fiyat/satın alma bağlantıları temizlenir. Elle ISBN değişikliğinde de eski bağlantılar temizlenir. Seçimden sonra **Kaydet** düğmesine basın.
+
+**Emare – Maske örneği:** Arama alanına `Emare Maske`, yazar alanına `Aslı Arslan` yazın. Kitapyurdu'nun ciltli baskısı `9786256372047`, karton kapak baskısı `9786256372030` ISBN'sini kullanır. Hangi baskıyı karşılaştırmak istediğinizi siz seçin. Doğrudan karton kapak bağlantısı: `https://www.kitapyurdu.com/kitap/emare-maske-karton-kapak/750641.html`. Bu bir kaynak bağlantısıdır; sitede sabit fiyat tutulmaz.
+
+Toplu doldurma yalnızca ISBN ile eşleşen kayıtları kullanır; ilk arama sonucunu otomatik seçmez. Kaynakların içermediği alanlar boş kalır. Kitap tanıtımı/yıl/baskı bilgilerini kaydetmeden kontrol edin.
 
 ## Fiyat karşılaştırması
 
-Her kitapta ISBN'yi doğrulayın ve **Fiyat karşılaştırması** alanına her satıra bir gerçek ürün bağlantısı ekleyin. Desteklenen mağazalar: D&R, Kitapyurdu, BKM Kitap, İdefix. Aynı ISBN/baskının bağlantılarını kullanın. Kaydedince kitap detay sayfası satıcı sayfalarından fiyat okumayı dener.
+Önce doğru baskının ISBN'sini kaydedin. Sistem, tanımlı ürün bağlantılarını okur; bağlantı bulunmayan desteklenen mağazalarda sınırlı ISBN/başlık araması yapıp ürün sayfalarını doğrulamayı dener. **Fiyat karşılaştırması** alanına her satıra bir doğrudan ürün adresi eklemek arama engelleri veya JavaScript gerektiren arama sayfalarında yardımcı olabilir. Bu da mağazanın ürün sayfasına erişim izni vermesini gerektirir.
 
-Yalnızca sayfanın JSON-LD Product/Book verisinde aynı ISBN/GTIN, TRY fiyatı ve InStock bilgisi doğrulanırsa teklif gösterilir. En düşük **ürün fiyatı** öne çıkarılır, satıcı bağlantısı verilir. Kargo hesaplanmaz; tüm internetin en ucuz fiyatı iddia edilmez. Satıcının ödeme ekranı son fiyatı belirler. Sonuçlar 5 dakika önbellekte tutulur.
+JSON-LD Product/Book, ürün kapsamındaki microdata veya açık ürün meta verilerinden **aynı ISBN** ve TRY ürün fiyatı doğrulanır. Ayrı Product/Book şemaları aynı baskı kimliği üzerinden birleştirilir. Yerel ondalık biçimleri desteklenir. Stok dışı/ön sipariş gibi açık durumlar karşılaştırmadan çıkarılır. Stok bilgisi verilmemişse fiyat **stok bilgisi doğrulanmadı** uyarısıyla gösterilir. Kargo hesaplanmaz ve tüm internetin en ucuz fiyatı iddia edilmez; en düşük fiyat erişilebilen, doğrulanmış teklifler arasındadır.
 
-API/ürün akışı mevcut olmadığı için sistem mağazaların tüm kataloglarını kendiliğinden taramaz veya ürün URL'lerini otomatik keşfetmez. Mağaza bot koruması, yönlendirme, eksik ISBN veya yapılandırılmış veri eksikliği varsa fiyat gösterilemez. Arama bağlantıları sunulur; arama bağlantısı fiyat teklifi değildir. ISBN'siz kitaplarda da yalnızca mağaza aramaları gösterilir. Geniş kapsamlı ve garantili otomatik fiyat toplama için mağaza izniyle API/XML ürün akışı entegrasyonu gerekir.
+Başarılı sonuçlar 5 dakika; fiyat alınamayan denemeler 30 saniye önbellekte tutulabilir. Kaynak durumu boş sonuçlarda açık gösterilir: eksik ISBN, HTTP 403/429, ürünün başka baskıya ait olması ve yapılandırılmış veri eksikliği ayrı açıklanır. ISBN yokken farklı baskı fiyatları gelişigüzel karıştırılmaz. Mağaza arama bağlantısı bir fiyat teklifi değildir.
 
-Sunucunun mağaza alan adlarına HTTPS çıkışı olmalı. Güvenlik nedeniyle yönlendirmeler ve listede olmayan alan adları otomatik takip edilmez. Bağlantıları son HTTPS ürün adresi olarak girin.
+Mağaza engelleri aşılmaz; CAPTCHA/bot koruması veya JavaScript ile gelen veriler için otomatik fiyat okuma garanti edilmez. Geniş kapsamlı ve sözleşmeye dayalı sürekli fiyat toplama için izinli API/XML ürün akışı gerekir. Ürün fiyatını ve stok durumunu ödeme öncesi mağazada doğrulayın.
+
+Sunucunun `www.googleapis.com`, `openlibrary.org` ve mağaza alan adlarına HTTPS çıkışı olmalıdır. Aynı mağazanın güvenli HTTPS kanonik yönlendirmeleri sınırlı olarak izlenir; farklı alan adları/özel ağ adresleri reddedilir. Kapaklar için ziyaretçi tarayıcısının kaynağın verdiği görsel alan adına erişmesi gerekir. TLS doğrulaması kapatılmaz.
+
+## Mevcut IIS sitesini güncelleme
+
+`downloads/thebooknest-catalog-fix.zip` yalnızca kod/görünüm dosyaları ve güncelleme notları içerir; mevcut kitap verilerinizi veya yönetici parolanızı içermez. Site dosyalarının yedeğini aldıktan sonra paket içindeki kod dosyalarını site köküne kopyalayın. `App_Data`, `content.json`, `img` ve kişisel `web.config` değerlerinizi koruyun. Önceki UTF-8 düzeltmesi uygulanmadıysa güncelleme notlarındaki `globalization` satırını mevcut `system.web` bölümünüze ekleyin. Ctrl+F5 ile yenileyin; panel tekrar giriş isteyebilir.
 
 ## Bulutta / yerelde geliştirme
 
@@ -73,8 +85,9 @@ Tarayıcı testi `/usr/bin/chromium` gerektirir, geçici sunucu/veri/parola kull
 
 ## Doğrulama durumu
 
-- Node API: 9 test geçti (fiyat ayrıştırma/eşleşme/sıralama, kaynak yedeği, erişim, kayıt ve yeniden başlatmada kalıcılık, yükleme, hız sınırı).
-- Chromium: giriş, kayıt/yenileme, bilgi seçimi, mevcut alanları koruma, fiyat yok durumu, en düşük fiyat bağlantısı, mobil taşma, çıkış kontrolleri geçti.
-- IIS handler C# kodu Mono derleyicisiyle derlendi; 15 bileşen kontrolü geçti (`test/IisTests.cs`). Bu gerçek Windows/IIS barındırma testi yerine geçmez.
-- Bulut ağ politikasının 403 engeli nedeniyle Google/Open Library ve gerçek mağaza fiyatları canlı doğrulanamadı. Gerekli ağ alan adları ortam ayarları taslağına eklendi; taslak kaydı mevcut ağ politikasını değiştirmez.
-- `thebooknest.online` üzerinde herhangi bir dosya değişikliği veya yayın yapılmadı. Kitaplara doğrulanmamış bilgi/fiyat eklenmedi.
+- Node.js: 20 test geçti; katalog fallback'i, dil/yazar eşleşmesi, doğru baskı, ürün keşfi, fiyat biçimleri, erişim ve kayıt kalıcılığı kapsanıyor.
+- Chromium: gerçek tarayıcıda kayıt/yenileme, yükleme, arama sorgusunu değiştirme, dil seçimi, ürün bağlantısı seçimi, baskı değiştirme onayı, eski bağlantı temizliği ve mobil görünüm geçti. Harici kaynaklar bu testte kontrollü yanıtlarla temsil edilir.
+- IIS handler C# kodu Mono ile derlendi; 26 bileşen kontrolü geçti. UTF-8 yanıt baytları ve Kitapyurdu'ndan alınmış, uzun tanıtım/tracking bilgileri ayıklanmış örnek şemalar sınanıyor. Bu kontroller gerçek Windows/IIS yayını yerine geçmez.
+- Canlı Kitapyurdu Emare – Maske sayfaları hem Node.js hem C# koduyla okundu: iki ayrı baskının Türkçe metadata bilgileri ve seçilen ISBN için ürün fiyatı doğrulandı. C# canlı testinde geçici Mono sertifika deposuna ortamın mevcut güvenilir CA paketi aktarıldı; TLS doğrulaması kapatılmadı. Yakalanmış test fiyatları çalışma zamanında fiyat olarak kullanılmaz.
+- Bu oturumun canlı kontrollerinde Google Books HTTP 429 kota hatası, D&R HTTP 403 bakım/erişim engeli, İdefix HTTP 511 erişim reddi döndürdü. BKM arama sayfası ürünleri JavaScript ile yükledi. Bu kaynakların fiyatları çalışıyor diye raporlanmadı; engeller atlatılmadı.
+- `thebooknest.online` veya kullanıcının yerel IIS kurulumu üzerinde dosya değişikliği yapılmadı. Mevcut kitap verileri değiştirilmedi; güncelleme ve doğru baskıyı seçme adımları kullanıcı tarafından uygulanmalıdır.

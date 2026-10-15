@@ -1,0 +1,24 @@
+THE BOOK NEST - KITAP BILGISI VE FIYAT OKUMA GUNCELLEMESI
+
+1. Mevcut site dosyalarinizin ve App_Data klasorunun yedegini alin.
+2. Paketteki save.ashx, admin.js, admin.css, book.js ve style.css dosyalarini
+   IIS site kokundeki ayni adli dosyalarla degistirin.
+3. App_Data, content.json, img ve kendi web.config dosyanizi koruyun.
+   Onceki UTF-8 duzeltmesi yoksa mevcut web.config / system.web altina ekleyin:
+   <globalization fileEncoding="utf-8" requestEncoding="utf-8" responseEncoding="utf-8" responseHeaderEncoding="utf-8" />
+   Zaten globalization varsa yenisini eklemek yerine kodlama degerlerini guncelleyin.
+   AdminPassword degerinizi degistirmeyin.
+4. Tarayicida Ctrl+F5 yapin. Panelden yeniden giris yapin.
+5. Kitaplik / Emare Maske / Bilgi cek: arama alanina Emare Maske, yazar alanina
+   Asli Arslan yazin. Turkce baskilar secili kalsin. Ciltli veya karton kapagi
+   bilincli olarak secin. Daha once yanlis alanlar kaydedildiyse Dolu alanlarin
+   uzerine de yaz kutusunu kullanin. Kaydet dugmesine basin.
+6. Alternatif: arama kutusuna dogrudan bu urun adresini yapistirin:
+   https://www.kitapyurdu.com/kitap/emare-maske-karton-kapak/750641.html
+7. Kitap detay sayfasini yenileyin. Sistem ayni ISBN icin erisilebilen fiyatlari
+   okur; magaza erisim hatalari Kaynak durumu bolumunde aciklanir.
+
+Google Books HTTP429 kotasi kitap bulunamadi anlamina gelmez. D&R gibi
+magazalar sunucu isteklerini HTTP403 ile engelleyebilir. Bu engeller asilmaz.
+Kitapyurdu kaynagi Google kaydi olmadan Turkce urun bilgilerini saglayabilir.
+Hicbir magaza veya kitabin fiyati sabitlenmis/uydurulmus degildir.

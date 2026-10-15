@@ -67,14 +67,14 @@ async function handler(req,res){
     if(req.method!=='GET'&&req.method!=='HEAD')return reply(res,405,{ok:false,msg:'Yöntem desteklenmiyor.'});
     if(route==='/api/books'){
       if(!authenticated(req))return reply(res,401,{ok:false,msg:'Giriş gerekli.'});
-      const result=await lookupBooks(u.searchParams.get('q'));return reply(res,200,result);
+      const result=await lookupBooks(u.searchParams.get('q'),undefined,{title:u.searchParams.get('title')||'',author:u.searchParams.get('author')||'',isbn:u.searchParams.get('isbn')||'',language:u.searchParams.get('lang')==='all'?'all':'tr'});return reply(res,200,result);
     }
     if(route==='/api/prices'){
       const d=await content(),b=d.books.find(b=>slug(b.title)===u.searchParams.get('book'));
       if(!b)return reply(res,404,{ok:false,msg:'Kitap bulunamadı.'});
       const key=JSON.stringify([b.isbn,b.title,b.author,b.priceUrls,b.buyUrl]);let result=cache.get(key);
       if(!result||result.until<Date.now()){
-        if(!pending.has(key))pending.set(key,comparePrices(b,{enabled:process.env.PRICE_FETCH_ENABLED!=='false'}).then(data=>{const entry={until:Date.now()+300000,data};cache.set(key,entry);return entry;}).finally(()=>pending.delete(key)));
+        if(!pending.has(key))pending.set(key,comparePrices(b,{enabled:process.env.PRICE_FETCH_ENABLED!=='false'}).then(data=>{const entry={until:Date.now()+(data.offers.length?300000:30000),data};cache.set(key,entry);return entry;}).finally(()=>pending.delete(key)));
         result=await pending.get(key);
       }
       return reply(res,200,result.data);

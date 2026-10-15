@@ -26,7 +26,16 @@ function form(o,fields){
     if(t=='area'||t=='urls'){inp=el('textarea');inp.value=t=='urls'?(o[k]||[]).join('\n'):o[k]||'';if(t=='urls')inp.placeholder='https://www.kitapyurdu.com/kitap/...';}
     else if(t=='img'){inp=imgField(o,k,lab);w.append(lab);return}
     else{inp=el('input');inp.type=t=='color'?'color':t=='num'?'number':'text';inp.value=o[k]??''}
-    inp.oninput=()=>{o[k]=t=='num'?+inp.value:t=='urls'?inp.value.split(/\n/).map(v=>v.trim()).filter(Boolean):inp.value;mark()};
+    inp.dataset.field=k;
+    inp.oninput=()=>{
+      if(k==='isbn'&&isbnKey(inp.value)!==isbnKey(o[k])&&((o.priceUrls||[]).length||o.buyUrl)){
+        o.priceUrls=[];o.buyUrl='';
+        for(const name of ['priceUrls','buyUrl']){const field=w.querySelector('[data-field="'+name+'"]');if(field)field.value=''}
+        let note=w.querySelector('.edition-note');if(!note){note=el('p','edition-note');lab.append(note)}
+        note.textContent='ISBN değiştiği için önceki baskının fiyat ve satın alma bağlantıları temizlendi. Bu baskının ürün bağlantılarını yeniden ekleyin.';
+      }
+      o[k]=t=='num'?+inp.value:t=='urls'?inp.value.split(/\n/).map(v=>v.trim()).filter(Boolean):inp.value;mark()
+    };
     lab.append(inp);w.append(lab);
   });return w}
 function imgField(o,k,lab){
@@ -54,37 +63,76 @@ function view(){
         const u=el('button',0,'↑'),d=el('button',0,'↓'),x=el('button',0,'🗑');u.onclick=()=>mv(i,-1);d.onclick=()=>mv(i,1);x.onclick=()=>del(i);r.append(inp,u,d,x);r.dataset.q=it.toLowerCase();box.append(r);return}
       const c=el('div','card'),h=el('div','ch'),sp=el('span',0,(i+1)+'. '+lab);
       const u=el('button',0,'↑'),d=el('button',0,'↓'),x=el('button',0,'🗑');u.onclick=()=>mv(i,-1);d.onclick=()=>mv(i,1);x.onclick=()=>del(i);
-      h.append(sp,u,d,x);c.append(h,form(it,s.f));if(s.p=='books'){const fb=el('button','b alt','🔎 Bilgi çek');fb.onclick=()=>pickInfo(it,draw);c.append(fb)}c.dataset.q=JSON.stringify(it).toLowerCase();box.append(c);
+      h.append(sp,u,d,x);c.append(h,form(it,s.f));if(s.p=='books'){const fb=el('button','b alt','🔎 Bilgi çek');fb.onclick=()=>pickInfo(it,draw);const note=el('p','book-help','Önce Türkçe baskıyı ve ISBN’yi doğrulayın. Fiyat karşılaştırması kaydedilmiş kitap bilgilerini kullanır.');c.append(fb,note)}c.dataset.q=JSON.stringify(it).toLowerCase();box.append(c);
     })}
   add.onclick=()=>{if(s.t=='str')arr.push('');else{const o={};s.f.forEach(f=>o[f[0]]=f[2]=='num'?0:f[2]=='urls'?[]:'');Object.assign(o,s.blank||{});arr.push(o)}
     mark();draw();box.lastElementChild.scrollIntoView({behavior:'smooth'});const i=box.lastElementChild.querySelector('input,textarea');i&&i.focus()};
   q.oninput=()=>[...box.children].forEach(c=>c.hidden=!c.dataset.q.includes(q.value.toLowerCase()));
   draw()}
 const strip=h=>(h||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
-async function gb(it){
-  const q=it.isbn||[it.title,it.author].filter(Boolean).join(' ');
-  const r=await fetch(API+'?action=books&q='+encodeURIComponent(q),{cache:'no-store'});
+const isbnKey=value=>{
+  let n=String(value||'').replace(/[^0-9X]/gi,'').toUpperCase();
+  if(n.length===10){n='978'+n.slice(0,9);n+=(10-[...n].reduce((sum,d,i)=>sum+Number(d)*(i%2?3:1),0)%10)%10}
+  return n;
+};
+const productLink=value=>{try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password&&(!u.port||u.port==='443')&&['dr.com.tr','kitapyurdu.com','bkmkitap.com','idefix.com'].some(h=>u.hostname===h||u.hostname==='www.'+h)?u.href:''}catch{return ''}};
+const sourceLink=value=>{try{const u=new URL(value);return ['http:','https:'].includes(u.protocol)?u.href:''}catch{return ''}};
+async function gb(it,options={}){
+  const q=(options.q??(it.isbn||it.title||'')).trim(),isIsbn=/^(?:[0-9][\s-]*){9}[0-9X]$|^(?:[0-9][\s-]*){13}$/.test(q);
+  const params=new URLSearchParams({action:'books',q,title:isIsbn||/^https?:\/\//i.test(q)?it.title||'':q,author:options.author??it.author??'',lang:options.lang||'tr'});
+  if(isIsbn)params.set('isbn',q);
+  const r=await fetch(API+'?'+params,{cache:'no-store'});
   const j=await r.json();if(!r.ok)throw new Error(j.msg||'Bilgi araması başarısız.');return j;
 }
 function fill(it,v,force){
+  if(v.isbn&&it.isbn&&isbnKey(v.isbn)!==isbnKey(it.isbn)&&!force)return false;
+  if(v.isbn&&isbnKey(v.isbn)!==isbnKey(it.isbn)&&((it.priceUrls||[]).length||it.buyUrl)){
+    if(!confirm('Seçilen baskının ISBN’si farklı. Önceki baskının fiyat ve satın alma bağlantıları temizlenecek. Bu baskıyı seçmek istiyor musun?'))return false;
+    it.priceUrls=[];it.buyUrl='';
+  }
   for(const k of ['title','author','desc','pages','publisher','year','isbn','cover']){
     if(v[k]&&(force||!it[k]))it[k]=v[k];
   }
-  mark();
+  const url=productLink(v.productUrl);if(url){it.priceUrls=[...new Set([...(it.priceUrls||[]),url])]}
+  mark();return true;
 }
 async function pickInfo(it,cb){
   const m=el('div','modal'),bx=el('div','mbox');m.append(bx);document.body.append(m);
-  const close=()=>m.remove();m.onclick=e=>{if(e.target==m)close()};
-  bx.append(el('h3',0,'“'+it.title+'” için sonuçlar'));const msg=el('p',0,'Aranıyor...');bx.append(msg);
-  try{const result=await gb(it),items=result.items;
-    msg.textContent=items.length?'Doğru kitabı seç. Boş alanlar doldurulur, dolu olanlar korunur.':'Sonuç bulunamadı. Kitap adını sadeleştirip tekrar dene.';
-    if(result.warnings.length)bx.append(el('p',0,result.warnings.join(' ')));const ow=el('input');ow.type='checkbox';const ol=el('label','f');ol.append(ow,' Dolu alanların üzerine de yaz');bx.append(ol);
-    items.forEach(v=>{const i=v,b=el('button','res'),im=el('img'),t=el('div');
-      if(i.cover)im.src=i.cover;
-      t.append(el('b',0,i.title||'?'),el('br'),el('small',0,(i.author||'')+' · '+(i.publisher||'')+' · '+(i.year||'')+' · '+i.source+' · '+(i.isbn||'ISBN yok')));
-      b.append(im,t);b.onclick=()=>{fill(it,v,ow.checked);close();cb()};bx.append(b)})
-  }catch(e){msg.textContent=e.message||'Bilgi alınamadı.'}
-  const c=el('button','b alt','Kapat');c.onclick=close;bx.append(c)}
+  const previous=document.activeElement;let request=0;
+  const close=()=>{request++;m.remove();previous?.focus()};m.onclick=e=>{if(e.target==m)close()};
+  bx.setAttribute('role','dialog');bx.setAttribute('aria-modal','true');bx.setAttribute('aria-labelledby','lookup-title');
+  const heading=el('h3',0,'Kitap bilgisi ara');heading.id='lookup-title';bx.append(heading,el('p','book-help','Kitap adını sadeleştirerek, ISBN ile veya D&R, Kitapyurdu, BKM Kitap ve İdefix ürün bağlantısını yapıştırarak yeniden arayabilirsin.'));
+  const search=el('form','lookup-form'),ql=el('label','f','Kitap adı, ISBN veya mağaza ürün bağlantısı'),q=el('input');q.type='search';q.value=it.isbn||it.title||'';q.required=true;ql.append(q);
+  const al=el('label','f','Yazar (isteğe bağlı)'),author=el('input');author.value=it.author||'';al.append(author);
+  const ll=el('label','f','Sonuç dili'),lang=el('select');lang.setAttribute('aria-label','Sonuç dili');for(const [value,label] of [['tr','Türkçe baskılar'],['all','Tüm diller']]){const o=el('option',0,label);o.value=value;lang.append(o)}ll.append(lang);
+  const submit=el('button','b','Ara');submit.type='submit';search.append(ql,al,ll,submit);
+  const msg=el('p','lookup-status');msg.setAttribute('role','status');msg.setAttribute('aria-live','polite');
+  const warnings=el('div','lookup-warnings'),itemsBox=el('div','lookup-results');
+  const ow=el('input');ow.type='checkbox';const ol=el('label','overwrite');ol.append(ow,' Dolu alanların üzerine de yaz (ISBN ve baskı dahil)');
+  bx.append(search,msg,warnings,ol,itemsBox);
+  async function run(){
+    const token=++request;submit.disabled=true;msg.textContent='Kaynaklarda aranıyor…';warnings.replaceChildren();itemsBox.replaceChildren();
+    try{
+      const result=await gb(it,{q:q.value,author:author.value,lang:lang.value});if(token!==request)return;
+      const items=Array.isArray(result.items)?result.items:[],notes=Array.isArray(result.warnings)?result.warnings:[];
+      msg.textContent=items.length?'Kitap adı, yazar, dil ve ISBN’yi karşılaştırıp doğru baskıyı seç. Dolu alanlar, kutuyu işaretlemediğin sürece korunur.':notes.length?'Bazı kaynaklardan bilgi alınamadı veya sonuçlar doğrulanamadı. Bu, kitabın mağazada olmadığı anlamına gelmez. Aşağıdaki kaynak durumunu incele; ISBN ya da doğrudan ürün bağlantısıyla tekrar dene.':'Bu arama için eşleşen baskı bulunamadı. Yazar alanını sadeleştir, ISBN veya mağaza ürün bağlantısıyla tekrar ara. Yabancı baskılar için “Tüm diller”i seç.';
+      if(notes.length){warnings.append(el('b',0,'Kaynak durumu'));notes.forEach(note=>warnings.append(el('p',0,String(note))))}
+      items.forEach(v=>{
+        const row=el('div','lookup-result'),b=el('button','res'),im=el('img'),t=el('span','result-copy');b.type='button';
+        if(v.cover){const cover=sourceLink(v.cover);if(cover)im.src=cover}im.alt='';im.loading='lazy';
+        const language=v.language?({tr:'Türkçe',tur:'Türkçe',en:'İngilizce',eng:'İngilizce'}[v.language]||v.language):'Dil belirtilmemiş';
+        t.append(el('b',0,v.title||'?'),el('span','result-author',v.author||'Yazar belirtilmemiş'),el('small',0,[v.publisher,v.year,language].filter(Boolean).join(' · ')),el('small',0,(v.source||'Kaynak belirtilmemiş')+' · ISBN: '+(v.isbn||'Belirtilmemiş')));
+        b.append(im,t);b.onclick=()=>{if(v.isbn&&it.isbn&&isbnKey(v.isbn)!==isbnKey(it.isbn)&&!ow.checked){msg.textContent='Bu sonucun ISBN’si kayıtlı baskıdan farklı. Bu baskıya geçmek için “Dolu alanların üzerine de yaz” kutusunu işaretle; eski fiyat bağlantıları temizlenir.';msg.scrollIntoView({block:'nearest'});return}if(fill(it,v,ow.checked)){close();cb()}};
+        row.append(b);const url=sourceLink(v.sourceUrl||v.productUrl);if(url){const a=el('a','source-link','Kaynakta aç');a.href=url;a.target='_blank';a.rel='noopener noreferrer';row.append(a)}itemsBox.append(row)
+      });
+    }catch(e){if(token!==request)return;msg.textContent='Arama tamamlanamadı: '+(e.message||'Kaynaklara ulaşılamadı.')+' Aynı pencerede sorguyu veya ürün bağlantısını değiştirerek tekrar deneyebilirsin.'}
+    finally{if(token===request)submit.disabled=false}
+  }
+  search.onsubmit=e=>{e.preventDefault();run()};
+  const c=el('button','b alt','Kapat');c.type='button';c.onclick=close;bx.append(c);
+  m.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){const fields=[...bx.querySelectorAll('button:not(:disabled),input,select,a[href]')],first=fields[0],last=fields[fields.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}};
+  q.focus();q.select();run();
+}
 async function autoFill(arr,cb){
   const todo=arr.filter(b=>!b.desc||!b.isbn||!b.publisher||!b.pages);if(!todo.length){alert('Kitapların temel bilgileri tamam.');return}
   if(!confirm(todo.length+' kitap için yalnızca ISBN ile kesin eşleşen sonuçlar doldurulacak. Diğerlerini Bilgi çek ile seçebilirsin. Devam?'))return;
