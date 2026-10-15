@@ -1,0 +1,22 @@
+const {chromium}=require('playwright-core');const {spawn}=require('node:child_process');const fs=require('node:fs/promises');const crypto=require('node:crypto');
+(async()=>{const password=crypto.randomBytes(24).toString('hex'),dir=await fs.mkdtemp('/tmp/booknest-ui-');let server,browser;try{
+ server=spawn(process.execPath,['server.js'],{cwd:require('node:path').join(__dirname,'..'),env:{...process.env,ADMIN_PASSWORD:password,DATA_DIR:dir,HOST:'127.0.0.1',PORT:'0'}});
+ const base=await new Promise((resolve,reject)=>{server.stderr.on('data',b=>reject(Error(String(b))));server.stdout.on('data',b=>{const m=String(b).match(/port (\d+)/);if(m)resolve('http://127.0.0.1:'+m[1]);});});
+ browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage']});const page=await browser.newPage({viewport:{width:1366,height:900}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(base+'/admin.html');await page.locator('#pw').fill(password);await page.getByRole('button',{name:'Giriş',exact:true}).click();await page.waitForURL('**/panel.html');await page.getByRole('button',{name:'Kitaplık',exact:true}).click();
+ await page.locator('.card').first().getByLabel('Yayınevi',{exact:true}).fill('Tarayıcı Test Yayınevi');await page.locator('#save').click();await page.locator('#st').filter({hasText:'site güncellendi'}).waitFor();await page.reload();await page.getByRole('button',{name:'Kitaplık',exact:true}).click();
+ if(await page.locator('.card').first().getByLabel('Yayınevi',{exact:true}).inputValue()!=='Tarayıcı Test Yayınevi')throw Error('save not persistent');
+ await page.route('**/save.ashx?action=books*',r=>r.fulfill({json:{items:[{title:'Emare: Sarmaşık',author:'Aslı Arslan',isbn:'9789750738609',publisher:'Kaynak Yayınevi',pages:'300',desc:'Kaynak açıklama',source:'Test kaynağı'}],warnings:[]}}));
+ await page.locator('.card').first().getByRole('button',{name:'🔎 Bilgi çek'}).click();await page.locator('.res').first().click();
+ if(await page.locator('.card').first().getByLabel('Sayfa sayısı',{exact:true}).inputValue()!=='300')throw Error('metadata not applied');
+ if(await page.locator('.card').first().getByLabel('Yayınevi',{exact:true}).inputValue()!=='Tarayıcı Test Yayınevi')throw Error('existing data overwritten');
+ await page.locator('#save').click();await page.locator('#st').filter({hasText:'site güncellendi'}).waitFor();
+ await page.screenshot({path:'/tmp/booknest-admin-desktop.png',fullPage:false});
+ await page.goto(base+'/kitap.html?k=emare-sarmasik');await page.getByText('Doğrulanmış güncel fiyat bulunamadı.',{exact:false}).waitFor();
+ await page.route('**/save.ashx?action=prices*',r=>r.fulfill({json:{offers:[{store:'Kitapyurdu',price:99.9,url:'https://www.kitapyurdu.com/kitap/test'}],searches:[{store:'D&R',url:'https://www.dr.com.tr/search?q=test'}],warnings:[],checkedAt:new Date().toISOString(),scope:'Test verisi; kargo hariç.'}}));await page.getByRole('button',{name:'Yeniden kontrol et'}).click();await page.getByRole('link',{name:'En düşük fiyata git',exact:true}).waitFor();
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/booknest-book-mobile.png',fullPage:true});
+ if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('mobile overflow');
+ await page.goto(base+'/panel.html');await page.getByRole('button',{name:'Kitaplık',exact:true}).click();if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('admin mobile overflow '+JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('*')].filter(e=>e.getBoundingClientRect().right>innerWidth).map(e=>({tag:e.tagName,cls:e.className,width:e.getBoundingClientRect().width})).slice(0,15))));
+ await page.locator('#out').click();await page.waitForURL('**/admin.html');await page.goto(base+'/panel.html');await page.waitForURL('**/admin.html');
+ if(errors.length)throw Error(errors.join('\n'));console.log('PASS: browser login, save/reload, metadata selection/preservation, empty prices, lowest-price link, mobile layout, logout/access.');
+}finally{if(browser)await browser.close();if(server)server.kill();await fs.rm(dir,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1});

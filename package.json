@@ -1,0 +1,18 @@
+{
+  "name": "thebooknest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kitapl\u0131k, y\u00f6netim paneli ve sat\u0131c\u0131 fiyat kar\u015f\u0131la\u015ft\u0131rmas\u0131",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "test": "node --test test/*.test.js",
+    "check": "node --check server.js && node --check admin.js && node --check script.js && node --check book.js",
+    "test:browser": "node test/browser.cjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.64.1"
+  }
+}
