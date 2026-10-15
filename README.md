@@ -15,6 +15,17 @@ Bu sürüm mevcut Windows/IIS sitesi için hazırlanmıştır. Bulutta geliştir
 
 **Kontrol:** Giriş yapın; bir kitabın yayınevini değiştirin, kaydedin ve sayfayı yeniden yükleyin. Siteyi açıp aynı kitabı kontrol edin. Görsel yükleyin. Çıkıştan sonra panelin giriş ekranına döndüğünü kontrol edin. `App_Data/content.json` ve `web.config` adreslerinin ziyaretçiye açılmadığını doğrulayın. Canlı IIS üzerinde bu kontroller yayından sonra yapılmalıdır.
 
+## IIS ana sayfada 403.14 hatası
+
+Bu hata, IIS'in istenen klasör için bir varsayılan belge açamadığını gösterir. Tek başına klasör yazma izni veya admin parolası hatası değildir.
+
+1. Tarayıcıda doğrudan `http://localhost:8181/index.html` adresini deneyin (portu kendi site bağlamanıza göre değiştirin).
+2. Sayfa açılırsa IIS Manager → site → **Default Document / Varsayılan Belge** bölümünde özelliğin etkin olduğunu ve listede `index.html` bulunduğunu kontrol edin. Bu sürüm `web.config` içinde `defaultDocument enabled="true"` ayarını açıkça kullanır.
+3. Doğrudan `index.html` isteği 404 verirse IIS Manager → site → **Basic Settings / Temel Ayarlar → Physical Path / Fiziksel Yol** değerini kontrol edin. Bu klasörün doğrudan içinde `index.html`, `web.config`, `save.ashx` ve `img` olmalı. Yalnızca ZIP dosyalarını içeren veya çıkarılan dosyaların bir üstündeki klasörü site kökü olarak seçmeyin. Kaynak deposunun `downloads` klasörü hazır paketleri içerir; IIS kökü değildir.
+4. Dosyalar doğru yerde olduğu halde kök adresi açılmıyorsa Windows IIS özelliklerinde **Common HTTP Features → Default Document** bileşeninin kurulu olduğunu kontrol edin. Yalnızca yapılandırmayı etkinleştirmek, eksik Windows bileşenini kurmaz.
+
+Klasör listesini göstermek bu uygulamanın başlangıç sayfası sorununu çözmez; site `index.html` ile açılmalıdır. Mevcut yönetici parolanızı ve sunucuya özel ayarlarınızı yeni `web.config` dosyasına aktarın; boş parola içeren örnekle kişisel yapılandırmanızı kaybetmeyin.
+
 ## Kitap bilgisini güncelleme
 
 Kitaplık bölümünde adı/yazarı veya mümkünse ISBN'yi girip **Bilgi çek** düğmesine basın. Google Books ve Open Library sonuçları kaynak, yazar, yayınevi ve ISBN ile gösterilir. Doğru baskıyı seçin. Varsayılan olarak yalnızca boş alanlar dolar; düzeltme yapmak için **Dolu alanların üzerine de yaz** seçeneğini işaretleyin. Ardından **Kaydet** düğmesine basın.
