@@ -1,0 +1,6 @@
+.env
+.data/
+node_modules/
+content.bak.json
+*.log
+test-results/

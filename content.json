@@ -1,0 +1,42 @@
+{
+ "site":{"brand":"🪺 The Book Nest","title":"The Book Nest · Tuğçe Kırçiçek","eyebrow":"kitap • vlog • günlük hayat","h1a":"Klasikler","h1b":"asla eskimez.","lead":"Merhaba, ben Tuğçe. Okuma günlükleri, kitap önerileri, kahve molaları ve sakin günlük vloglar burada.","heroPhoto":"img/tugce3.jpg","igUrl":"https://www.instagram.com/thebooknest1/","kitapUrl":"https://1000kitap.com/tugcee08","footer":"© 2026 The Book Nest · Tuğçe Kırçiçek"},
+ "texts":{"nav1":"Hakkında","nav2":"Kitaplık","nav3":"Seriler","nav4":"Günlük","nav5":"Ritüel","nav6":"Kareler","nav7":"İletişim","igBtn":"Instagram'da Takip Et","shelfBtn":"Kitaplığa Göz At","aboutTitle":"Hakkında","shelfTitle":"Kitaplık","shelfHint":"Sayfada paylaşılan kitaplardan seçmeler. Türe göre filtrele.","allLabel":"Hepsi","pickBtn":"🎲 Bana Kitap Öner","pickPrefix":"📖 Bugünün önerisi: ","seriesTitle":"Sevdiğim Seriler","journalTitle":"Okuma Günlüğü & Vlog","ritualTitle":"Okuma Ritüeli","ritualHint":"Tuğçe'nin okuma anını güzelleştiren küçük şeyler. İşaretle.","photosTitle":"Kareler","photosHint":"Kitapların dışında, günlük hayattan.","contactTitle":"İletişim & İşbirliği","contactHint":"Yayınevi, kitap ve marka işbirlikleri için Instagram'dan DM yeterli.","igHandle":"@thebooknest1","kitapBtn":"1000Kitap Profili"},
+ "about":{"p1":"Okumak benim için günün en güzel molası. Bazen tek bir sayfa, bazen bütün gece. Klasiklerden fantastik serilere, gerilimden romantik hikâyelere kadar her türde okuyorum.","p2":"Sayfada kitap incelemelerinin yanında okuma günlükleri, kargo açılışları, kitap ayraçları, kahve eşliğinde okuma anları ve günlük vloglar da var.","avatar":"img/tugce2.jpg","chips":["📚 Kitap","🎬 Vlog","☕ Okuma Ritüeli","🤝 İşbirliği"],"stats":[{"n":97,"label":"Gönderi"},{"n":20,"label":"Kitap önerisi"},{"n":4,"label":"Okuma günlüğü"},{"n":1000,"label":"Kitap hayali"}]},
+ "books":[
+ {"title":"Emare: Sarmaşık","author":"Aslı Arslan","genre":"Fantastik","color":"#3b3b3b"},
+ {"title":"Emare: Maske","author":"Aslı Arslan","genre":"Fantastik","color":"#222222"},
+ {"title":"Emare: Pusula","author":"Aslı Arslan","genre":"Fantastik","color":"#5a5a52"},
+ {"title":"Hizmetçi","author":"Freida McFadden","genre":"Gerilim","color":"#2f4a8a"},
+ {"title":"Hizmetçinin Sırrı","author":"Freida McFadden","genre":"Gerilim","color":"#a62d2d"},
+ {"title":"Hizmetçi İzliyor","author":"Freida McFadden","genre":"Gerilim","color":"#8a8272"},
+ {"title":"İçinde Bir Sen: Engerek","author":"Binnur Şafak Nigiz","genre":"Modern","color":"#34414a"},
+ {"title":"İçinde Bir Sen: Asreman","author":"Binnur Şafak Nigiz","genre":"Modern","color":"#2a2a2a"},
+ {"title":"Çirkin Aşk","author":"Colleen Hoover","genre":"Romantik","color":"#4a4f55"},
+ {"title":"Başka Dilde Aşk","author":"Mia Sheridan","genre":"Romantik","color":"#8a6fb0"},
+ {"title":"Adelaide","author":"Genevieve Wheeler","genre":"Romantik","color":"#6fa88a"},
+ {"title":"Beyaz Kadın","author":"Wilkie Collins","genre":"Klasik","color":"#b79a62"},
+ {"title":"Bir İdam Mahkûmunun Son Günü","author":"Victor Hugo","genre":"Klasik","color":"#a88d55"},
+ {"title":"Monte Cristo Kontu","author":"Alexandre Dumas","genre":"Klasik","color":"#8c6b3e"},
+ {"title":"İki Şehrin Hikayesi","author":"Charles Dickens","genre":"Klasik","color":"#6d5a3a"},
+ {"title":"Acımak","author":"Reşat Nuri Güntekin","genre":"Klasik","color":"#6b4a6e"},
+ {"title":"İyi Bir Kızın Cinayet Rehberi","author":"Holly Jackson","genre":"Gerilim","color":"#3b6d9c"},
+ {"title":"İyi Kız, Kötü Son","author":"Holly Jackson","genre":"Gerilim","color":"#c0262c"},
+ {"title":"Kızıl Kraliçe","author":"Victoria Aveyard","genre":"Fantastik","color":"#7e8aa3"}],
+ "series":[
+ {"name":"Emare","author":"Aslı Arslan","volumes":"Sarmaşık • Maske • Pusula","desc":"Sayfanın yıldızı. Okuma günlüklerinin ve en çok konuşulan serilerin başında."},
+ {"name":"Hizmetçi","author":"Freida McFadden","volumes":"Hizmetçi • Hizmetçinin Sırrı • Hizmetçi İzliyor","desc":"\"Bu evde herkes bir şey saklıyor...\" Üç bölümlük video serisiyle tanıtıldı."},
+ {"name":"İçinde Bir Sen","author":"Binnur Şafak Nigiz","volumes":"Engerek • Asreman • Yehmum","desc":"Altı çizili cümleler ve duygusal tartışmalarla dolu bir seri."},
+ {"name":"İyi Bir Kızın Cinayet Rehberi","author":"Holly Jackson","volumes":"İyi Bir Kızın Cinayet Rehberi • İyi Kız, Kötü Son","desc":"Kitaplığa yeni katılanlardan, gerilim sevenlere önerilir."}],
+ "journal":[
+ {"title":"Okuma Günlüğü 1-4","desc":"Bir kitabı bitirene kadar günlük günlük okuma notları."},
+ {"title":"Kargolarımı Birlikte Açıyoruz","desc":"Yeni gelen kitaplar, ayraçlar ve sürprizler. Part 1, 2 ve 3."},
+ {"title":"Benimle Bir Gün Geçirin","desc":"Park yürüyüşü, tiramisu, kahve, Bim alışverişi, Büyükada gezisi."},
+ {"title":"Okuma Sohbetleri","desc":"\"Kitaptan mutlu son beklemek benim hatamdı\" ve daha fazlası."},
+ {"title":"Okuduklarımı Puanlıyorum","desc":"Kitaplığa yeni katılanlar, ayraç seçkileri ve yeni renkli kalemler."}],
+ "ritual":["☕ Bir fincan kahve ya da çay","📅 Yeni kitaba başlarken ilk sayfaya tarihi at","🖍️ Renkli kalemler ve güzel bir ayraç","🍰 Yanında bir tatlı ya da dondurma","🌙 Gece lambası ve sessizlik"],
+ "photos":[
+ {"src":"img/tugce1.jpg","caption":"Akşam yürüyüşleri","alt":"Akşam ağaç önünde"},
+ {"src":"img/tugce2.jpg","caption":"Yoldayız","alt":"Arabada selfie"},
+ {"src":"img/tugce3.jpg","caption":"Hizmetçi üçlemesi","alt":"Hizmetçi serisi"}],
+ "quotes":["Klasikler asla eskimez.","Bir kitap her şeyi renklendirebilir.","Okumadan olmaz.","Yazın en güzel tarafı: kahve ve kitap."]
+}

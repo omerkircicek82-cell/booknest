@@ -1,0 +1,21 @@
+THE BOOK NEST - TÜRKÇE KARAKTER DÜZELTMESİ
+
+1. Mevcut save.ashx ve web.config dosyalarının yedeğini alın.
+2. Bu paketteki save.ashx dosyasını IIS site kökündeki dosyayla değiştirin.
+   Dosya UTF-8 BOM kodlamasındadır; metin editöründe ANSI olarak kaydetmeyin.
+3. KENDİ web.config dosyanızda <system.web> bölümünün içine aşağıdaki satırı
+   ekleyin. Zaten globalization satırı varsa yenisini eklemek yerine var olanın
+   kodlama özelliklerini bu değerlerle güncelleyin:
+
+   <globalization fileEncoding="utf-8" requestEncoding="utf-8" responseEncoding="utf-8" responseHeaderEncoding="utf-8" />
+
+4. AdminPassword değeriniz ve diğer sunucu ayarlarınız aynı kalsın.
+   App_Data, content.json ve img klasörlerini değiştirmeyin.
+5. web.config değişikliği uygulamayı yeniden başlatır ve eski fiyat önbelleğini
+   temizler. Tarayıcıda Ctrl+F5 yapın; panel yeniden giriş isteyebilir.
+
+Kontrol: kitap detayında fiyat açıklamasındaki "Tanımlı satıcı bağlantılarında"
+ve "İdefix" adının doğru göründüğünü doğrulayın.
+
+Bu düzeltme kayıtlı kitap metinlerine dönüştürme uygulamaz. Daha önce bozuk
+kaydedilmiş bir alan varsa o alanı panelde ayrıca düzeltin.
