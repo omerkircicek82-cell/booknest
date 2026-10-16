@@ -15,18 +15,18 @@ fetch('save.ashx?action=content',{cache:'no-store'}).then(r=>{if(!r.ok)throw Err
   w.append(el('p','desc',b.desc||'Bu kitap için henüz açıklama eklenmedi.'));
   const prices=el('section','prices');prices.append(el('h2',0,'Nereden alabilirim?'));
   const status=el('p','hint','Satıcı fiyatları kontrol ediliyor…');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
-  const diagnostics=el('div','price-diagnostics'),results=el('div','price-results'),searches=el('div','price-searches'),retry=el('button','btn ghost','Yeniden kontrol et');
-  prices.append(status,diagnostics,results,searches,retry);w.append(prices);
+  const results=el('div','price-results'),searches=el('div','price-searches'),retry=el('button','btn ghost','Yeniden kontrol et');
+  prices.append(status,results,searches,retry);w.append(prices);
   function fallbackSearches(){
     const q=encodeURIComponent(b.isbn||[b.title,b.author].filter(Boolean).join(' '));
     for(const [store,url] of [['D&R','https://www.dr.com.tr/search?q='],['Kitapyurdu','https://www.kitapyurdu.com/index.php?route=product/search&filter_name='],['BKM Kitap','https://www.bkmkitap.com/arama?q='],['İdefix','https://www.idefix.com/arama?q=']])searches.append(link(store+'’nda ara',url+q));
   }
   async function loadPrices(){
-    retry.disabled=true;status.textContent='Satıcı fiyatları kontrol ediliyor…';results.replaceChildren();searches.replaceChildren();diagnostics.replaceChildren();
+    retry.disabled=true;status.textContent='Satıcı fiyatları kontrol ediliyor…';results.replaceChildren();searches.replaceChildren();
     try{
-      const r=await fetch('save.ashx?action=prices&book='+encodeURIComponent(k),{cache:'no-store'}),j=await r.json();if(!r.ok)throw Error(j.msg||'Fiyatlar yüklenemedi.');
-      const offers=Array.isArray(j.offers)?j.offers:[],notes=Array.isArray(j.warnings)?j.warnings:[];
-      status.textContent=offers.length?'Erişilebilen kaynaklarda bu baskı için bulunan en düşük ürün fiyatı aşağıda. Kargo hariçtir; ödeme öncesi satıcıda doğrulayın.':!b.isbn?'Bu kitapta ISBN kayıtlı olmadığı için aynı baskının fiyatı doğrulanamadı. Mağaza arama bağlantılarından Türkçe baskıyı ve ISBN’yi kontrol edebilirsiniz.':'Bu denemede bu baskı için doğrulanabilir fiyat alınamadı. Bu, kitabın mağazalarda olmadığı anlamına gelmez. Kaynak durumunu inceleyebilir veya mağazada arayabilirsiniz.';
+      const r=await fetch('save.ashx?action=prices&book='+encodeURIComponent(k),{cache:'no-store'});if(!r.ok)throw Error();const j=await r.json();
+      const offers=Array.isArray(j.offers)?j.offers:[];
+      status.textContent=offers.length?'Karşılaştırılan mağazalarda bu baskı için en düşük ürün fiyatı aşağıda. Kargo hariçtir; ödeme öncesi satıcıda doğrulayın.':'Mağazalarda incele';
       offers.forEach((o,i)=>{
         const row=el('div','price-row'+(i===0?' best':''));
         row.append(el('span',0,o.store),el('strong',0,new Intl.NumberFormat('tr-TR',{style:'currency',currency:'TRY'}).format(o.price)),link(i===0?'En düşük fiyata git':'Satıcıya git',o.url,'btn'));
@@ -34,12 +34,9 @@ fetch('save.ashx?action=content',{cache:'no-store'}).then(r=>{if(!r.ok)throw Err
         if(o.stockStatus==='unknown')row.append(el('small','stock-note','Stok bilgisi doğrulanmadı; mağazada kontrol edin.'));
         results.append(row);
       });
-      if(j.scope)results.append(el('p','hint',j.scope));
-      const checked=new Date(j.checkedAt);if(offers.length&&!Number.isNaN(checked.getTime()))results.append(el('p','hint','Son kontrol: '+checked.toLocaleString('tr-TR')+' · Sonuçlar 5 dakika önbellekte tutulabilir.'));
+      const checked=new Date(j.checkedAt);if(offers.length&&!Number.isNaN(checked.getTime()))results.append(el('p','hint','Son kontrol: '+checked.toLocaleString('tr-TR')));
       const storeSearches=Array.isArray(j.searches)?j.searches:[];storeSearches.forEach(s=>searches.append(link(s.store+'’nda ara',s.url)));if(!storeSearches.length)fallbackSearches();
-      if(notes.length){const details=el('details','source-status');details.open=!offers.length;details.append(el('summary',0,'Kaynak durumu'));notes.forEach(s=>details.append(el('p',0,String(s))));diagnostics.append(details)}
-      if(!offers.length&&b.isbn&&!(b.priceUrls||[]).length&&!b.buyUrl)diagnostics.append(el('p','price-help','Otomatik aramada bu baskının ürün sayfası doğrulanamazsa mağaza arama bağlantılarını kullanın. Fiyat karşılaştırması, erişilebilen ve ISBN’si eşleşen ürünlerle sınırlıdır.'));
-    }catch(e){status.textContent='Fiyat kaynaklarına şu anda ulaşılamıyor. '+e.message;diagnostics.append(el('p','price-help','Mağaza bağlantılarından fiyatı kontrol edebilir veya daha sonra yeniden deneyebilirsiniz.'));fallbackSearches();}
+    }catch{status.textContent='Mağazalarda incele';fallbackSearches();}
     finally{retry.disabled=false;}
   }
   retry.onclick=loadPrices;loadPrices();

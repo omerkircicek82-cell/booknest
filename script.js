@@ -2,7 +2,7 @@ const slug=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').re
 const get=(o,p)=>p.split('.').reduce((a,k)=>a&&a[k],o);
 const $=s=>document.querySelector(s);
 const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
-fetch('save.ashx?action=content',{cache:'no-store'}).then(r=>r.json()).then(init).catch(()=>{document.body.prepend(el('p',0,'İçerik yüklenemedi (content.json).'))});
+fetch('save.ashx?action=content',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).then(init).catch(()=>{document.body.prepend(el('p',0,'İçerik şu anda görüntülenemiyor. Lütfen daha sonra tekrar deneyin.'))});
 function init(d){
   document.title=d.site.title||document.title;
   document.querySelectorAll('[data-t]').forEach(e=>e.textContent=get(d,e.dataset.t)||'');

@@ -1,0 +1,25 @@
+THE BOOK NEST - YEREL VERITABANI VE ADMIN GUNLUKLERI
+
+1. Siteyi durdurup mevcut site dosyalarini ve App_Data klasorunun tamamini
+   yedekleyin. Pakette mevcut kitap verisi veya parola bulunmaz.
+2. .NET Framework 4.8 kurulu olmali. IIS uygulama havuzu CLR v4 / Integrated
+   olarak kalir. Kendi web.config dosyanizdaki httpRuntime ve compilation
+   ayarlarinda targetFramework="4.8" kullanin; AdminPassword degerinizi koruyun.
+3. Paket icindeki kod dosyalarini VE bin klasorunu site kokune kopyalayin.
+   Kutuphane DLL'leri bin klasorunde kalmali. Ayri DB sunucusu gerekmez.
+4. App_Data icin uygulama havuzu kimligine Modify izni verin. Mevcut content.json,
+   App_Data icerigi, img ve yonetici parolanizi koruyun.
+5. Siteyi baslatin, Ctrl+F5 yapin ve panele yeniden giris yapin.
+6. Bilgi cek ile bir kitap arayin. Toplanan yararli bilgiler yerel DB'ye kaydolur.
+   Ayni arama sonraki sefer yerel kaydi kullanir. Gerekirse Kaynaklardan yenile
+   secenegiyle magaza/katalog bilgisini yeniden alin.
+7. Yerel kitap veritabani sekmesinden kayitlari arayabilirsiniz. Kaynak durumu
+   sekmesinde zaman, kitap/sorgu ve hata ayrintilari gorunur. Gunlukleri temizlemek
+   kitap kayitlarini silmez. Bu bolumler yonetici oturumu gerektirir.
+
+IIS veritabani: App_Data/catalog.db (LiteDB). Meta bilgiler kalicidir; fiyatlar
+eski bir DB kaydindan guncel teklif diye gosterilmez. Son 200 gunluk kaydi tutulur.
+Ziyaretci sayfalari ve fiyat API'si kaynak hata ayrintilarini gostermez.
+
+Yedek/geri yukleme: siteyi durdurun ve App_Data klasorunu bir butun olarak koruyun.
+Bin dosyalarinin lisanslari ve NuGet paket dogrulama bilgileri kaynak depodadir.

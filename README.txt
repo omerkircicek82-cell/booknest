@@ -1,5 +1,7 @@
 Windows/IIS kurulumu ve kullanım adımları README.md dosyasındadır.
-Özet: ASP.NET 4.x / CLR v4 Integrated, en az 12 karakter AdminPassword,
-App_Data ve img için uygulama havuzuna Modify izni, HTTPS.
-Panel: admin.html. Kalıcı kayıt: App_Data/content.json.
-Fiyatlar için ISBN ve mağaza ürün bağlantıları panelden eklenir.
+Özet: .NET Framework 4.8 / ASP.NET 4.x / CLR v4 Integrated; paket içindeki bin
+klasörünü de kopyalayın. En az 12 karakter AdminPassword, HTTPS ve App_Data/img
+için uygulama havuzuna Modify izni gerekir.
+Panel: admin.html. Site içeriği: App_Data/content.json.
+Yerel kitap veritabanı ve yönetici günlükleri: App_Data/catalog.db (LiteDB).
+Kaynak hata ayrıntıları yalnızca admin panelindeki Kaynak durumu bölümündedir.

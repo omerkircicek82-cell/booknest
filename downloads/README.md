@@ -1,6 +1,7 @@
 # İndirilebilir paketler
 
 - `thebooknest-iis.zip`: Windows/IIS'e kurulacak site dosyaları. Kurulum adımları ZIP içindeki README.md dosyasında.
+- `thebooknest-local-db-update.zip`: Yerel kitap veritabanı ve yalnızca admin panelinde kaynak günlükleri; `bin` klasörü dahildir, .NET Framework 4.8 gerektirir.
 - `thebooknest-catalog-fix.zip`: Mevcut IIS sitesine kitap bilgisi/fiyat okuma düzeltmesi; veri veya parola içermez.
 - `thebooknest-source.zip`: Node.js geliştirme sunucusu ve testler dahil kaynak kodlar.
 

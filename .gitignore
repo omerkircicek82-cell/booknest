@@ -4,3 +4,8 @@ node_modules/
 content.bak.json
 *.log
 test-results/
+App_Data/
+*.db
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

@@ -11,9 +11,11 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using LiteDB;
 
 public class BookNestApi : IHttpHandler {
   static readonly object SaveLock = new object();
+  static readonly object DatabaseLock = new object();
   static readonly string[] Hosts = { "dr.com.tr", "kitapyurdu.com", "bkmkitap.com", "idefix.com" };
   static readonly string[] Stores = { "D&R", "Kitapyurdu", "BKM Kitap", "İdefix" };
   JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = 2000000 };
@@ -84,6 +86,96 @@ public class BookNestApi : IHttpHandler {
     throw new ArgumentException("Çok fazla kaynak yönlendirmesi.");
   }
   string ReadContent(HttpContext c) { string file=c.Server.MapPath("~/App_Data/content.json");return File.ReadAllText(File.Exists(file)?file:c.Server.MapPath("~/content.json")); }
+  string DatabasePath(HttpContext c) { return c.Server.MapPath("~/App_Data/catalog.db"); }
+  LiteDatabase OpenDatabase(string path) {
+    if(String.IsNullOrEmpty(path))throw new IOException("Yerel veritabanı yolu belirlenemedi.");
+    Directory.CreateDirectory(Path.GetDirectoryName(path));
+    return new LiteDatabase(new ConnectionString {Filename=path,Connection=ConnectionType.Shared});
+  }
+  string DatabaseFailure(Exception e) { return "Yerel kitap veritabanı açılamadı veya kaydedilemedi. App_Data klasörüne IIS uygulama havuzu için Modify izni verin; bin/LiteDB.dll ve bin/System.Buffers.dll dosyalarını ve .NET Framework 4.8 kurulumunu kontrol edin. ("+SafeDiagnostic(e.GetType().Name+": "+e.Message,500)+")"; }
+  string SafeDiagnostic(string text,int limit) {
+    string value=Regex.Replace(text??"",@"https?://[^\s<>\""']+",m=>{Uri u;if(!Uri.TryCreate(m.Value,UriKind.Absolute,out u))return "[bağlantı]";return u.Scheme+"://"+u.Host+u.AbsolutePath;},RegexOptions.IgnoreCase);
+    value=Regex.Replace(value,@"(?i)\b(password|pass|token|api[_-]?key|authorization|secret|cookie)\b\s*[:=]\s*[^\s,;]+","$1=[gizlendi]");
+    value=Clean(value);return value.Length>limit?value.Substring(0,limit):value;
+  }
+  void RecordDiagnostics(string path,string category,string book,IEnumerable<string> messages) {
+    var clean=(messages??new string[0]).Select(x=>SafeDiagnostic(x,1200)).Where(x=>x!="").Distinct().ToArray();if(clean.Length==0)return;
+    lock(DatabaseLock)using(var db=OpenDatabase(path)) {
+      var log=db.GetCollection<BsonDocument>("diagnostics");log.EnsureIndex("createdAt");
+      foreach(string message in clean)log.Insert(new BsonDocument {{"_id",ObjectId.NewObjectId()},{"createdAt",DateTime.UtcNow.ToString("o")},{"category",SafeDiagnostic(category,80)},{"book",SafeDiagnostic(book,240)},{"message",message}});
+      foreach(var row in log.FindAll().OrderByDescending(x=>x["_id"].AsObjectId).Skip(200).ToArray())log.Delete(row["_id"]);
+    }
+  }
+  void TryRecordDiagnostics(string path,string category,string book,IEnumerable<string> messages) {
+    try {RecordDiagnostics(path,category,book,messages);}catch(Exception e){System.Diagnostics.Trace.TraceError("BookNest local log: "+SafeDiagnostic(e.GetType().Name+": "+e.Message,500));}
+  }
+  void LogDiagnostics(HttpContext c,string category,string book,IEnumerable<string> messages) {try {RecordDiagnostics(DatabasePath(c),category,book,messages);}catch(Exception e){System.Diagnostics.Trace.TraceError("BookNest local log: "+SafeDiagnostic(e.GetType().Name+": "+e.Message,500));}}
+  string HashKey(string value) {using(var h=SHA256.Create())return BitConverter.ToString(h.ComputeHash(Encoding.UTF8.GetBytes(value))).Replace("-","");}
+  string SafeSourceUrl(string value) {
+    Uri u;if(!Uri.TryCreate(value,UriKind.Absolute,out u)||u.Scheme!="https"||u.Port!=443||u.UserInfo!="")return "";
+    string host=u.Host.ToLowerInvariant();if(Retailer(value)>=0&&host.StartsWith("www."))host=host.Substring(4);
+    var query=HttpUtility.ParseQueryString(u.Query);var parts=new List<string>();foreach(string key in query.AllKeys.Where(x=>x!=null).OrderBy(x=>x,StringComparer.Ordinal)) {
+      if(Regex.IsMatch(key,@"^(utm_.*|s_token|token|access_token|refresh_token|api[_-]?key|key|secret|password|pass|authorization|signature|sig|ref|referrer|fbclid|gclid|campaign)$",RegexOptions.IgnoreCase))continue;
+      foreach(string entry in query.GetValues(key).OrderBy(x=>x,StringComparer.Ordinal))parts.Add(Uri.EscapeDataString(key)+"="+Uri.EscapeDataString(entry));
+    }return "https://"+host+u.AbsolutePath+(parts.Count==0?"":"?"+String.Join("&",parts));
+  }
+  string MetadataUrl(IDictionary<string,object> item) {string url=S(item,"productUrl");if(url=="")url=S(item,"sourceUrl");return Retailer(url)>=0?SafeSourceUrl(url):"";}
+  IDictionary<string,object> MetadataFields(IDictionary<string,object> item) {
+    var copy=new Dictionary<string,object>();foreach(string key in new[]{"source","id","title","author","desc","pages","publisher","year","isbn","cover","language","sourceUrl","productUrl"})if(S(item,key)!="")copy[key]=S(item,key);
+    foreach(string key in new[]{"sourceUrl","productUrl"})if(copy.ContainsKey(key))copy[key]=SafeSourceUrl(S(copy,key));
+    if(S(copy,"id").StartsWith("https://",StringComparison.OrdinalIgnoreCase)||S(copy,"id").StartsWith("http://",StringComparison.OrdinalIgnoreCase))copy["id"]=SafeSourceUrl(S(copy,"id"));
+    copy["isbn"]=NormalIsbn(S(item,"isbn"));copy["language"]=Language(S(item,"language"));return copy;
+  }
+  bool UsefulMetadata(IDictionary<string,object> item) { return S(item,"title")!=""&&(NormalIsbn(S(item,"isbn"))!=""||S(item,"desc")!=""||S(item,"pages")!=""||S(item,"publisher")!=""); }
+  void StoreMetadata(string path,IEnumerable<IDictionary<string,object>> items) {
+    var records=new List<BsonDocument>();foreach(var raw in items??new IDictionary<string,object>[0]) {
+      if(raw==null||!UsefulMetadata(raw))continue;var item=MetadataFields(raw);string source=S(item,"source");if(source=="")source="Yönetici";item["source"]=source;
+      string identity=MetadataUrl(item);if(identity=="")identity=S(item,"id");if(identity=="")identity=S(item,"sourceUrl");if(identity==""&&NormalIsbn(S(item,"isbn"))==""){if(source!="Yönetici")continue;identity="manual:"+HashKey(Slug(S(item,"title"))+"|"+Slug(S(item,"author"))+"|"+Slug(S(item,"publisher"))+"|"+S(item,"year")+"|"+S(item,"pages"));item["id"]=identity;}if(identity=="")identity="isbn:"+Isbn13(S(item,"isbn"));
+      string key=HashKey(Isbn13(S(item,"isbn"))+"|"+Language(S(item,"language"))+"|"+source+"|"+identity);
+      records.Add(new BsonDocument {{"_id",key},{"isbn",Isbn13(S(item,"isbn"))},{"titleKey",Slug(S(item,"title"))},{"authorKey",Slug(S(item,"author"))},{"language",Language(S(item,"language"))},{"urlKey",MetadataUrl(item)},{"metadata",Json.Serialize(item)},{"cachedAt",DateTime.UtcNow.ToString("o")}});
+    }
+    if(records.Count==0)return;
+    lock(DatabaseLock)using(var db=OpenDatabase(path)){var collection=db.GetCollection<BsonDocument>("books");collection.EnsureIndex("isbn");collection.EnsureIndex("urlKey");foreach(var record in records)collection.Upsert(record);}
+  }
+  string SeedExistingMetadata(HttpContext c) {
+    try {
+      string path=DatabasePath(c);lock(DatabaseLock){using(var db=OpenDatabase(path)){if(db.GetCollection<BsonDocument>("books").Count()>0)return "";}
+        var content=O(Json.DeserializeObject(ReadContent(c)));StoreMetadata(path,A(V(content,"books")).Select(O));}
+      return "";
+    }catch(Exception e){string warning=DatabaseFailure(e);LogDiagnostics(c,"database","Mevcut kitapların aktarımı",new[]{warning});return warning;}
+  }
+  List<IDictionary<string,object>> LocalLookup(string path,string query,IDictionary<string,object> context) {
+    string q=(query??"").Trim();context=context??new Dictionary<string,object>();var expected=new Dictionary<string,object>(context);if(S(expected,"language")=="")expected["language"]="tr";
+    bool direct=Retailer(q)>=0;string isbn=NormalIsbn(S(expected,"isbn"));if(NormalIsbn(q)!=""){isbn=NormalIsbn(q);expected["isbn"]=isbn;}if(!direct&&isbn==""&&S(expected,"title")=="")expected["title"]=q;
+    var result=new List<IDictionary<string,object>>();
+    lock(DatabaseLock)using(var db=OpenDatabase(path)) {
+      var collection=db.GetCollection<BsonDocument>("books");IEnumerable<BsonDocument> rows=direct?collection.Find(Query.EQ("urlKey",SafeSourceUrl(q))):isbn!=""?collection.Find(Query.EQ("isbn",Isbn13(isbn))):collection.FindAll();
+      foreach(var row in rows.OrderByDescending(x=>x["cachedAt"].AsString)) {var item=O(Json.DeserializeObject(row["metadata"].AsString));if(item!=null&&MatchesBook(item,expected)){item["cachedAt"]=row["cachedAt"].AsString;item["local"]=true;result.Add(item);if(result.Count>=50)break;}}
+    }return result;
+  }
+  object LookupCached(string path,string query,IDictionary<string,object> context,bool refresh) {
+    string q=(query??"").Trim();if(q.Length<2||q.Length>1500)throw new ArgumentException("Kitap adı, ISBN veya desteklenen mağaza ürün bağlantısı girin (2–1500 karakter).");
+    if((q.StartsWith("http://",StringComparison.OrdinalIgnoreCase)||q.StartsWith("https://",StringComparison.OrdinalIgnoreCase))&&Retailer(q)<0)throw new ArgumentException("D&R, Kitapyurdu, BKM Kitap veya İdefix HTTPS ürün bağlantısı kullanın.");
+    var localWarnings=new List<string>();if(!refresh)try{var saved=LocalLookup(path,q,context);if(saved.Count>0)return new{items=saved,warnings=localWarnings,fromCache=true,local=true};}catch(Exception e){localWarnings.Add(DatabaseFailure(e));}
+    var data=O(Json.DeserializeObject(Json.Serialize(Lookup(q,context))));return CompleteLookup(path,q,A(V(data,"items")).Select(O).Where(x=>x!=null).ToArray(),A(V(data,"warnings")).Select(Convert.ToString).Concat(localWarnings));
+  }
+  object CompleteLookup(string path,string query,IEnumerable<IDictionary<string,object>> results,IEnumerable<string> sourceWarnings) {
+    var items=results.ToArray();var warnings=sourceWarnings.ToList();
+    try{StoreMetadata(path,items);}catch(Exception e){warnings.Add(DatabaseFailure(e));}
+    TryRecordDiagnostics(path,"books",query,warnings);return new {items=items,warnings=warnings.Distinct().ToArray(),fromCache=false,local=false};
+  }
+  object Diagnostics(string path) {
+    lock(DatabaseLock)using(var db=OpenDatabase(path)) {
+      var entries=db.GetCollection<BsonDocument>("diagnostics").FindAll().OrderByDescending(x=>x["_id"].AsObjectId).Select(x=>new{id=x["_id"].AsObjectId.ToString(),createdAt=x["createdAt"].AsString,category=x["category"].AsString,book=x["book"].AsString,message=x["message"].AsString}).ToArray();
+      return new {entries=entries,database=new{kind="LiteDB",count=db.GetCollection<BsonDocument>("books").Count(),path="App_Data/catalog.db"}};
+    }
+  }
+  void ClearDiagnostics(string path) {lock(DatabaseLock)using(var db=OpenDatabase(path))db.GetCollection<BsonDocument>("diagnostics").DeleteAll();}
+  object LocalBooks(string path,string query) {
+    string q=Slug(query??"");lock(DatabaseLock)using(var db=OpenDatabase(path)) {
+      var collection=db.GetCollection<BsonDocument>("books");var items=collection.FindAll().Where(x=>q==""||x["titleKey"].AsString.Contains(q)||x["authorKey"].AsString.Contains(q)||x["isbn"].AsString.Contains(q)).OrderByDescending(x=>x["cachedAt"].AsString).Take(100).Select(x=>{var item=O(Json.DeserializeObject(x["metadata"].AsString));item["cachedAt"]=x["cachedAt"].AsString;item["local"]=true;return item;}).ToArray();return new{items=items,count=collection.Count()};
+    }
+  }
   string NameValue(object value) {var d=O(value);if(d!=null)return Clean(Decode(S(d,"name")));var a=A(value).ToArray();return a.Length>0?String.Join(", ",a.Select(NameValue).Where(x=>x!="")):Clean(Decode(Convert.ToString(value)));}
   IEnumerable<string> Words(string text) {return Slug(text).Split('-').Where(x=>x.Length>1);}
   bool Similar(string expected,string actual,double minimum) {
@@ -279,7 +371,8 @@ public class BookNestApi : IHttpHandler {
     if(supplied.Any(x=>Retailer(x)<0))warnings.Add("Desteklenmeyen satıcı bağlantıları atlandı; yalnızca D&R, Kitapyurdu, BKM Kitap ve İdefix HTTPS ürün bağlantıları kullanın.");
     if(isbn=="")warnings.Add("Fiyatları karşılaştırmak için bu kitaba ait ISBN-13/ISBN-10 gerekli. Panelde Türkçe baskıyı seçin veya mağazanın ürün bağlantısından ISBN bilgisini içe aktarın.");
     else {if(urls.Count==0)warnings.Add("Tanımlı ürün bağlantısı yok; dört mağazada ISBN ile ürün araması deneniyor. Engellenen aramalar için panelde doğrudan ürün bağlantısı ekleyin.");DateTime deadline=DateTime.UtcNow.AddSeconds(25);var stores=new StorePrices[4];System.Threading.Tasks.Parallel.For(0,4,new System.Threading.Tasks.ParallelOptions {MaxDegreeOfParallelism=4},r=>stores[r]=CheckStore(r,isbn,S(book,"title"),urls,deadline));foreach(var store in stores){offers.AddRange(store.Offers);warnings.AddRange(store.Warnings);}}
-    var result=new {offers=offers.OrderBy(x=>(decimal)x["price"]).ToArray(),searches=searches,warnings=warnings.Distinct().ToArray(),checkedAt=DateTime.UtcNow.ToString("o"),scope="Aynı ISBN için mağaza sayfalarında gözlenen TRY ürün fiyatları. Stok bilgisi belirtilmeyen teklifler işaretlenir. Kargo dahil değildir."};
+    LogDiagnostics(c,"prices",S(book,"title")+(isbn==""?"":" ["+isbn+"]"),warnings);
+    var result=new {offers=offers.OrderBy(x=>(decimal)x["price"]).ToArray(),searches=searches,checkedAt=DateTime.UtcNow.ToString("o"),scope="Aynı ISBN için mağaza sayfalarında gözlenen TRY ürün fiyatları. Stok bilgisi belirtilmeyen teklifler işaretlenir. Kargo dahil değildir."};
     c.Cache.Insert(key,result,null,DateTime.UtcNow.AddSeconds(offers.Count>0?300:30),System.Web.Caching.Cache.NoSlidingExpiration);return result;
   }
   void Validate(IDictionary<string,object> d) {
@@ -298,7 +391,11 @@ public class BookNestApi : IHttpHandler {
       if(c.Request.HttpMethod=="POST"&&c.Request.Headers["Origin"]!=null){Uri origin;if(!Uri.TryCreate(c.Request.Headers["Origin"],UriKind.Absolute,out origin)||origin.Authority!=c.Request.Url.Authority){Fail(c,403,"İstek kaynağı geçersiz.");return;}}
       if(action=="content") {if(c.Request.HttpMethod!="GET"){Fail(c,405,"GET gerekli.");return;}Out(c,200,Json.DeserializeObject(ReadContent(c)));return;}
       if(action=="prices") {if(c.Request.HttpMethod!="GET"){Fail(c,405,"GET gerekli.");return;}var data=O(Json.DeserializeObject(ReadContent(c)));var book=A(V(data,"books")).Select(O).FirstOrDefault(b=>Slug(S(b,"title"))==c.Request.QueryString["book"]);if(book==null){Fail(c,404,"Kitap bulunamadı.");return;}Out(c,200,Prices(c,book));return;}
-      if(action=="books") {if(c.Request.HttpMethod!="GET"){Fail(c,405,"GET gerekli.");return;}if(!Auth(c)){Fail(c,401,"Giriş gerekli.");return;}Out(c,200,Lookup(c.Request.QueryString["q"],new Dictionary<string,object>{{"title",c.Request.QueryString["title"]??""},{"author",c.Request.QueryString["author"]??""},{"isbn",c.Request.QueryString["isbn"]??""},{"language",c.Request.QueryString["lang"]??"tr"}}));return;}
+      if(action=="books") {if(c.Request.HttpMethod!="GET"){Fail(c,405,"GET gerekli.");return;}if(!Auth(c)){Fail(c,401,"Giriş gerekli.");return;}string seedWarning=SeedExistingMetadata(c);var result=O(Json.DeserializeObject(Json.Serialize(LookupCached(DatabasePath(c),c.Request.QueryString["q"],new Dictionary<string,object>{{"title",c.Request.QueryString["title"]??""},{"author",c.Request.QueryString["author"]??""},{"isbn",c.Request.QueryString["isbn"]??""},{"language",c.Request.QueryString["lang"]??"tr"}},c.Request.QueryString["refresh"]=="1"))));if(seedWarning!="")result["warnings"]=A(V(result,"warnings")).Select(Convert.ToString).Concat(new[]{seedWarning}).Distinct().ToArray();Out(c,200,result);return;}
+      if(action=="diagnostics"||action=="local-books") {
+        if(c.Request.HttpMethod!="GET"){Fail(c,405,"GET gerekli.");return;}if(!Auth(c)){Fail(c,401,"Giriş gerekli.");return;}
+        if(action=="local-books")SeedExistingMetadata(c);Out(c,200,action=="diagnostics"?Diagnostics(DatabasePath(c)):LocalBooks(DatabasePath(c),c.Request.QueryString["q"]));return;
+      }
       if(c.Request.HttpMethod!="POST"){Fail(c,405,"POST gerekli.");return;}
       if(action=="login") {
         if(Auth(c)){Out(c,200,new{ok=true});return;}
@@ -310,12 +407,14 @@ public class BookNestApi : IHttpHandler {
         c.Cache.Remove(key);var bytes=new byte[32];using(var rng=RandomNumberGenerator.Create())rng.GetBytes(bytes);string token=BitConverter.ToString(bytes).Replace("-","");c.Cache.Insert("session_"+token,true,null,DateTime.UtcNow.AddHours(8),System.Web.Caching.Cache.NoSlidingExpiration);Cookie(c,token,8);Out(c,200,new{ok=true});return;
       }
       if(!Auth(c)){Fail(c,401,"Oturum süresi doldu. Yeniden giriş yapın.");return;}
+      if(action=="diagnostics-clear"){ClearDiagnostics(DatabasePath(c));Out(c,200,new{ok=true});return;}
       if(action=="logout"){c.Cache.Remove("session_"+c.Request.Cookies["bn_session"].Value);Cookie(c,"",-1);Out(c,200,new{ok=true});return;}
       if(action=="save") {
         if(c.Request.ContentLength>1000000){Fail(c,413,"İstek çok büyük.");return;}string body;using(var reader=new StreamReader(c.Request.InputStream,Encoding.UTF8))body=reader.ReadToEnd();if(body.Length>1000000)throw new ArgumentException("İçerik çok büyük.");var d=O(Json.DeserializeObject(body));Validate(d);
         string file=c.Server.MapPath("~/App_Data/content.json"),backup=c.Server.MapPath("~/App_Data/content.bak.json"),temp=c.Server.MapPath("~/App_Data/content.tmp.json");
         lock(SaveLock){Directory.CreateDirectory(c.Server.MapPath("~/App_Data"));File.WriteAllText(temp,Json.Serialize(d),new UTF8Encoding(false));if(File.Exists(file))File.Replace(temp,file,backup);else {File.Copy(c.Server.MapPath("~/content.json"),backup,true);File.Move(temp,file);}}
-        Out(c,200,new{ok=true,msg="Kaydedildi"});return;
+        var warnings=new List<string>();try{StoreMetadata(DatabasePath(c),A(V(d,"books")).Select(O));}catch(Exception e){warnings.Add(DatabaseFailure(e));}
+        TryRecordDiagnostics(DatabasePath(c),"save","Kitaplık",warnings);Out(c,200,new{ok=true,msg="Kaydedildi",warnings=warnings});return;
       }
       if(action=="upload") {
         string type=c.Request.ContentType??"",ext=type=="image/jpeg"?".jpg":type=="image/png"?".png":type=="image/webp"?".webp":"";if(ext==""){Fail(c,400,"JPG, PNG veya WebP seçin.");return;}
@@ -326,6 +425,10 @@ public class BookNestApi : IHttpHandler {
         }
       }
       Fail(c,400,"Bilinmeyen işlem.");
-    }catch(ArgumentException e){Fail(c,400,e.Message);}catch(UnauthorizedAccessException){Fail(c,500,"Kayıt izni yok. IIS uygulama havuzuna App_Data ve img klasörleri için Modify izni verin.");}catch(Exception e){System.Diagnostics.Trace.TraceError("BookNest: "+e);Fail(c,502,action=="books"?"Kitap kaynaklarına ulaşılamadı. Sunucunun dış ağ erişimini kontrol edin.":"İşlem tamamlanamadı. IIS günlüklerini ve klasör izinlerini kontrol edin.");}
+    }catch(Exception e){
+      string detail=e is ArgumentException?e.Message:e is UnauthorizedAccessException?"Kayıt izni yok. IIS uygulama havuzuna App_Data ve img klasörleri için Modify izni verin.":action=="diagnostics"||action=="local-books"||action=="diagnostics-clear"?DatabaseFailure(e):"İşlem tamamlanamadı. "+SafeDiagnostic(e.GetType().Name+": "+e.Message,800);
+      string logPath=null;try{logPath=DatabasePath(c);}catch{}TryRecordDiagnostics(logPath,action,c.Request.QueryString["book"]??c.Request.QueryString["q"]??"",new[]{detail});
+      bool publicRead=action=="content"||action=="prices";Fail(c,e is ArgumentException?400:e is UnauthorizedAccessException?500:502,publicRead?"Şu anda yüklenemiyor. Lütfen biraz sonra tekrar deneyin.":detail);
+    }
   }
 }

@@ -6,7 +6,7 @@ Bu sürüm mevcut Windows/IIS sitesi için hazırlanmıştır. Bulutta geliştir
 
 1. Mevcut site klasörünün ve özellikle `content.json`, `img`, `web.config` dosyalarının yedeğini alın. Daha önce bu sürüm kullanıldıysa `App_Data` klasörünü de yedekleyin.
 2. `thebooknest-iis.zip` içeriğini sitenin uygulama köküne çıkarın. Mevcut içerik daha güncelse ZIP'teki `content.json` dosyasını onun üzerine yazmayın. Mevcut `img` dosyalarını ve `App_Data` içeriğini koruyun. Eski özel IIS ayarlarınız varsa yeni `web.config` ile birleştirin.
-3. IIS'te ASP.NET 4.x, .NET Extensibility ve ISAPI Extensions/Filters etkin olmalı. Uygulama havuzu .NET CLR v4.0 / Integrated olmalı. Güncel .NET Framework 4.8 önerilir; kod 4.5+ API'lerini kullanır. Statik barındırma tek başına `save.ashx` çalıştıramaz.
+3. IIS'te ASP.NET 4.x, .NET Extensibility ve ISAPI Extensions/Filters etkin olmalı. Uygulama havuzu .NET CLR v4.0 / Integrated olmalı. Yerel veritabanı desteği için .NET Framework 4.8 gerekir. Paketteki `bin` klasörünü de site köküne kopyalayın; ayrı bir veritabanı sunucusu gerekmez. Statik barındırma tek başına `save.ashx` çalıştıramaz.
 4. `web.config` içindeki boş `AdminPassword` değerine **en az 12 karakterlik kendinize ait bir parola** yazın. XML özel karakterlerini uygun kaçışlarla yazın (`&` için `&amp;` gibi). Alternatif olarak IIS uygulama sürecine `BOOKNEST_ADMIN_PASSWORD` ortam değişkeni sağlayın; bu değer önceliklidir. Parolayı Git'e yüklemeyin. Eski arşivdeki zayıf parola artık kabul edilmez.
 5. Site kökünde `App_Data` ve `img` klasörlerini oluşturun. Yalnızca bu iki klasöre uygulama havuzunun kimliği için Modify izni verin (`IIS AppPool\HAVUZ_ADI`). Kaynak kod klasörünün tamamına yazma izni vermeniz gerekmez.
 6. HTTPS kullanın. `/admin.html` adresinden giriş yapın. Kitaplık → kitabı düzenle → Kaydet. Siteyi yenilediğinizde değişiklik görünmelidir.
@@ -52,15 +52,29 @@ Toplu doldurma yalnızca ISBN ile eşleşen kayıtları kullanır; ilk arama son
 
 JSON-LD Product/Book, ürün kapsamındaki microdata veya açık ürün meta verilerinden **aynı ISBN** ve TRY ürün fiyatı doğrulanır. Ayrı Product/Book şemaları aynı baskı kimliği üzerinden birleştirilir. Yerel ondalık biçimleri desteklenir. Stok dışı/ön sipariş gibi açık durumlar karşılaştırmadan çıkarılır. Stok bilgisi verilmemişse fiyat **stok bilgisi doğrulanmadı** uyarısıyla gösterilir. Kargo hesaplanmaz ve tüm internetin en ucuz fiyatı iddia edilmez; en düşük fiyat erişilebilen, doğrulanmış teklifler arasındadır.
 
-Başarılı sonuçlar 5 dakika; fiyat alınamayan denemeler 30 saniye önbellekte tutulabilir. Kaynak durumu boş sonuçlarda açık gösterilir: eksik ISBN, HTTP 403/429, ürünün başka baskıya ait olması ve yapılandırılmış veri eksikliği ayrı açıklanır. ISBN yokken farklı baskı fiyatları gelişigüzel karıştırılmaz. Mağaza arama bağlantısı bir fiyat teklifi değildir.
+Başarılı sonuçlar 5 dakika; fiyat alınamayan denemeler 30 saniye önbellekte tutulabilir. Kaynak hataları yalnızca oturum açılmış admin panelindeki **Kaynak durumu** bölümünde gösterilir. Ziyaretçilere hata kodları, ISBN eksikliği, sunucu yolları veya teknik açıklamalar sunulmaz; fiyat olmadığında mağaza arama bağlantıları gösterilir. ISBN yokken farklı baskı fiyatları gelişigüzel karıştırılmaz. Mağaza arama bağlantısı bir fiyat teklifi değildir.
 
 Mağaza engelleri aşılmaz; CAPTCHA/bot koruması veya JavaScript ile gelen veriler için otomatik fiyat okuma garanti edilmez. Geniş kapsamlı ve sözleşmeye dayalı sürekli fiyat toplama için izinli API/XML ürün akışı gerekir. Ürün fiyatını ve stok durumunu ödeme öncesi mağazada doğrulayın.
 
 Sunucunun `www.googleapis.com`, `openlibrary.org` ve mağaza alan adlarına HTTPS çıkışı olmalıdır. Aynı mağazanın güvenli HTTPS kanonik yönlendirmeleri sınırlı olarak izlenir; farklı alan adları/özel ağ adresleri reddedilir. Kapaklar için ziyaretçi tarayıcısının kaynağın verdiği görsel alan adına erişmesi gerekir. TLS doğrulaması kapatılmaz.
 
+## Yerel kitap veritabanı ve yönetici günlükleri
+
+IIS, kitap bilgilerini **LiteDB** ile `App_Data/catalog.db` dosyasında kalıcı saklar. Ayrı SQL sunucusu veya tarayıcı localStorage'ı kullanılmaz. Kitap bilgisi aramasından elde edilen yararlı kayıtlar ve panelde kaydedilen dolu kitap bilgileri sonraki görevlerde yeniden kullanılabilir. Aynı ISBN'nin baskı kimliği korunur; ISBN'siz kaynak kayıtları ayrı kimlikle tutulur. Başlık/yazar/dil koşulları yerel aramada da uygulanır. Yalnızca adı ve yazarı bulunan boş başlangıç kayıtları, gerçek kaynaklardan bilgi alınmasını engellemez.
+
+**Bilgi çek** varsayılan olarak önce yerel veritabanını arar. Yeni kaynak verisi almak istediğinizde **Kaynaklardan yenile** seçeneğini kullanın. Yerel kayıtta bulmak, kitabı otomatik olarak site rafına eklemez: doğru baskıyı seçip mevcut Kaydet akışını kullanın.
+
+Panelde **Yerel kitap veritabanı** kayıtları arayıp incelemek içindir. **Kaynak durumu** bölümünde kitap/sorgu, zaman ve hata ayrıntıları bulunur. Son 200 günlük kaydı tutulur; günlükleri temizlemek kitap veritabanını silmez. Bu iki uç nokta yönetici oturumu gerektirir. Ziyaretçilere dönen fiyat API yanıtlarında bile kaynak hataları bulunmaz.
+
+Kitap metadata kayıtları kalıcıdır; fiyatlar bunların içine güncel teklif gibi kaydedilmez. Fiyatlar mevcut kısa ömürlü önbellek ve canlı satıcı doğrulamasıyla alınır. Kaynaklardan alınan tanıtım metinlerini yayımlamadan önce gözden geçirin.
+
+IIS uygulama havuzuna `App_Data` için Modify izni gerekir. Veritabanı ve günlük dosyaları dışarıya açılmaz. Yedek alırken siteyi durdurup `App_Data` klasörünün tamamını kopyalayın; içerik dosyası ve veritabanı birlikte korunur. Paketler oluşturulmuş veritabanı, günlük, parola veya kullanıcı kayıtları içermez. Kitaplıkların lisans ve doğrulama bilgileri kaynak depoda saklanır.
+
+Node.js geliştirme sunucusu aynı uygulama akışını yerel **SQLite** (`.data/catalog.sqlite`) ile doğrular. IIS ve Node veritabanı dosya biçimleri farklıdır; birinin dosyasını diğerine kopyalamayın. Her ikisi de kendi çalışma ortamında yeniden başlatmadan sonra kayıtlarını korur.
+
 ## Mevcut IIS sitesini güncelleme
 
-`downloads/thebooknest-catalog-fix.zip` yalnızca kod/görünüm dosyaları ve güncelleme notları içerir; mevcut kitap verilerinizi veya yönetici parolanızı içermez. Site dosyalarının yedeğini aldıktan sonra paket içindeki kod dosyalarını site köküne kopyalayın. `App_Data`, `content.json`, `img` ve kişisel `web.config` değerlerinizi koruyun. Önceki UTF-8 düzeltmesi uygulanmadıysa güncelleme notlarındaki `globalization` satırını mevcut `system.web` bölümünüze ekleyin. Ctrl+F5 ile yenileyin; panel tekrar giriş isteyebilir.
+`downloads/thebooknest-local-db-update.zip` kod/görünüm dosyaları, veritabanı kitaplıklarının bulunduğu `bin` klasörü ve güncelleme notları içerir; mevcut kitap verilerinizi veya yönetici parolanızı içermez. Siteyi durdurup dosyaların ve `App_Data` klasörünün tamamının yedeğini alın; paket içindeki kod dosyaları ile `bin` klasörünü site köküne kopyalayın. .NET Framework 4.8 kurulu olmalı; mevcut `web.config` içindeki `httpRuntime` ve `compilation` ayarlarında `targetFramework="4.8"` kullanın. Yönetici parolanızı koruyun. `App_Data`, `content.json`, `img` ve kişisel `web.config` değerlerinizi koruyun. Önceki UTF-8 düzeltmesi uygulanmadıysa güncelleme notlarındaki `globalization` satırını mevcut `system.web` bölümünüze ekleyin. Ctrl+F5 ile yenileyin; panel tekrar giriş isteyebilir.
 
 ## Bulutta / yerelde geliştirme
 
@@ -75,7 +89,7 @@ npm run check
 
 Sunucuyu çalıştırmak için `.env.example` dosyasını `.env` olarak kopyalayın, `ADMIN_PASSWORD` değerini kendi yerel parolanızla doldurun, ardından `npm start` çalıştırın. Ortam değişkeni olarak da verebilirsiniz. Parola boşsa sunucu başlamaz. Yayında HTTPS kullanırken `SECURE_COOKIE=true` ayarlayın. `.env` ve `.data` Git dışında tutulur; üretim IIS parolasını geliştirme ortamına taşımayın.
 
-Node.js kalıcı verileri `.data/content.json`, yedeği `.data/content.bak.json`, yüklenen görselleri `.data/img` içinde saklar. Başlangıç verileri korunur. `DATA_DIR`, `HOST`, `PORT` değişkenleri desteklenir. `PRICE_FETCH_ENABLED=false` canlı fiyat okumayı durdurur. Proxy değişkenleri Node 24'ün desteklediği şekilde kullanılır; TLS doğrulaması açıktır.
+Node.js kalıcı verileri `.data/content.json`, yedeği `.data/content.bak.json`, kitap/günlük veritabanını `.data/catalog.sqlite`, yüklenen görselleri `.data/img` içinde saklar. Başlangıç verileri korunur. `DATA_DIR`, `HOST`, `PORT` değişkenleri desteklenir. `PRICE_FETCH_ENABLED=false` canlı fiyat okumayı durdurur. Proxy değişkenleri Node 24'ün desteklediği şekilde kullanılır; TLS doğrulaması açıktır.
 
 ```sh
 npm run test:browser
@@ -85,9 +99,9 @@ Tarayıcı testi `/usr/bin/chromium` gerektirir, geçici sunucu/veri/parola kull
 
 ## Doğrulama durumu
 
-- Node.js: 20 test geçti; katalog fallback'i, dil/yazar eşleşmesi, doğru baskı, ürün keşfi, fiyat biçimleri, erişim ve kayıt kalıcılığı kapsanıyor.
-- Chromium: gerçek tarayıcıda kayıt/yenileme, yükleme, arama sorgusunu değiştirme, dil seçimi, ürün bağlantısı seçimi, baskı değiştirme onayı, eski bağlantı temizliği ve mobil görünüm geçti. Harici kaynaklar bu testte kontrollü yanıtlarla temsil edilir.
-- IIS handler C# kodu Mono ile derlendi; 26 bileşen kontrolü geçti. UTF-8 yanıt baytları ve Kitapyurdu'ndan alınmış, uzun tanıtım/tracking bilgileri ayıklanmış örnek şemalar sınanıyor. Bu kontroller gerçek Windows/IIS yayını yerine geçmez.
+- Node.js: 29 test geçti; katalog fallback'i, dil/yazar eşleşmesi, doğru baskı, ürün keşfi, fiyat biçimleri, gerçek SQLite kalıcılığı, ağ olmadan yerel tekrar kullanım, erişim/günlük gizliliği ve kayıt kalıcılığı kapsanıyor.
+- Chromium: gerçek tarayıcıda kayıt/yenileme, yükleme, arama sorgusunu değiştirme, dil seçimi, ürün bağlantısı seçimi, baskı değiştirme onayı, eski bağlantı temizliği, yalnızca admin günlükleri/yerel arşiv, kayıt başarılıyken arşiv uyarısı, ziyaretçiye teknik hata sızmaması ve mobil görünüm geçti. Harici kaynaklar bu testte kontrollü yanıtlarla temsil edilir.
+- IIS handler C# kodu Mono ile derlendi; 26 katalog/UTF-8 kontrolü ve 44 gerçek veritabanı/özel API kontrolü geçti (toplam 70). Veritabanı testleri, uygulamanın ayrı süreçlerde kapanıp açılmasından sonra kayıtların ve günlüklerin korunmasını da doğrular. UTF-8 yanıt baytları ve Kitapyurdu'ndan alınmış, uzun tanıtım/tracking bilgileri ayıklanmış örnek şemalar sınanıyor. Bu kontroller gerçek Windows/IIS yayını yerine geçmez.
 - Canlı Kitapyurdu Emare – Maske sayfaları hem Node.js hem C# koduyla okundu: iki ayrı baskının Türkçe metadata bilgileri ve seçilen ISBN için ürün fiyatı doğrulandı. C# canlı testinde geçici Mono sertifika deposuna ortamın mevcut güvenilir CA paketi aktarıldı; TLS doğrulaması kapatılmadı. Yakalanmış test fiyatları çalışma zamanında fiyat olarak kullanılmaz.
 - Bu oturumun canlı kontrollerinde Google Books HTTP 429 kota hatası, D&R HTTP 403 bakım/erişim engeli, İdefix HTTP 511 erişim reddi döndürdü. BKM arama sayfası ürünleri JavaScript ile yükledi. Bu kaynakların fiyatları çalışıyor diye raporlanmadı; engeller atlatılmadı.
 - `thebooknest.online` veya kullanıcının yerel IIS kurulumu üzerinde dosya değişikliği yapılmadı. Mevcut kitap verileri değiştirilmedi; güncelleme ve doğru baskıyı seçme adımları kullanıcı tarafından uygulanmalıdır.

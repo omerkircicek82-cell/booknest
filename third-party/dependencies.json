@@ -1,0 +1,23 @@
+{
+  "verification": "Downloaded over TLS; complete nupkg SHA512 matched official NuGet catalog packageHash before extraction. Package signatures retained in original NuGet archives on nuget.org. No native dependencies. IIS deployment requires .NET Framework 4.8.",
+  "packages": [
+    {
+      "package": "litedb.5.0.21",
+      "packageUrl": "https://api.nuget.org/v3-flatcontainer/litedb/5.0.21/litedb.5.0.21.nupkg",
+      "packageSha512Base64": "Sg9EKJwqWNSbDd1jl34+3pS/fD7klgC7ke2yF9A6yhejWK42IczS5LNaYrIjP/cCbzq5NKtq+Zj1fXcs6BCRkw==",
+      "packageHashSource": "https://api.nuget.org/v3/catalog0/data/2024.07.05.16.53.21/litedb.5.0.21.json",
+      "assembly": "bin/LiteDB.dll",
+      "assemblySha256": "c0058a52eb8914c98092525803d0560531f2d3bf5ab0c06c4ebd60da4518256d",
+      "packageEntry": "lib/net45/LiteDB.dll"
+    },
+    {
+      "package": "system.buffers.4.5.1",
+      "packageUrl": "https://api.nuget.org/v3-flatcontainer/system.buffers/4.5.1/system.buffers.4.5.1.nupkg",
+      "packageSha512Base64": "gNphWOVbm89+C15jebnPRaYykU8De1PFv1YJV24814IfeGGVa3PXRHDS0MLlbdI1pe9Mpv/n4ZK4INwtAjqv8g==",
+      "packageHashSource": "https://api.nuget.org/v3/catalog0/data/2020.03.24.17.12.54/system.buffers.4.5.1.json",
+      "assembly": "bin/System.Buffers.dll",
+      "assemblySha256": "accccfbe45d9f08ffeed9916e37b33e98c65be012cfff6e7fa7b67210ce1fefb",
+      "packageEntry": "lib/net461/System.Buffers.dll"
+    }
+  ]
+}

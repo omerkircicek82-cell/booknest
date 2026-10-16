@@ -1,6 +1,7 @@
 'use strict';
 const http=require('node:http'), fs=require('node:fs/promises'), path=require('node:path'), crypto=require('node:crypto');
 const {lookupBooks,comparePrices,retailerFor}=require('./lib/catalog');
+const {LocalDatabase}=require('./lib/local-db');
 if(http.setGlobalProxyFromEnv)http.setGlobalProxyFromEnv();
 const ROOT=__dirname, DATA=path.resolve(process.env.DATA_DIR||path.join(ROOT,'.data'));
 const password=process.env.ADMIN_PASSWORD;
@@ -8,6 +9,7 @@ if(!password||password.length<12){console.error('ADMIN_PASSWORD en az 12 karakte
 const sessions=new Map(), failures=new Map(), cache=new Map(), pending=new Map();
 const slug=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 const contentPath=path.join(DATA,'content.json');
+let database;
 let saving=Promise.resolve();
 async function content(){return JSON.parse(await fs.readFile(contentPath,'utf8'));}
 function reply(res,status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
@@ -29,13 +31,14 @@ function validate(d){
   }
   const walk=o=>{if(!o||typeof o!=='object')return;for(const [k,v] of Object.entries(o)){if(typeof v==='object')walk(v);else if(typeof v==='string'&&/(url|src|cover|avatar|photo)$/i.test(k)&&v&&!/^https?:\/\//i.test(v)&&!/^img\/[a-zA-Z0-9_./ -]+$/.test(v))throw new Error('Geçersiz bağlantı: '+k);}};walk(d);
 }
-async function save(d){validate(d);const text=JSON.stringify(d,null,2);const task=saving.then(async()=>{await fs.copyFile(contentPath,path.join(DATA,'content.bak.json'));const tmp=path.join(DATA,'content.tmp');await fs.writeFile(tmp,text);await fs.rename(tmp,contentPath);cache.clear();});saving=task.catch(()=>{});return task;}
+async function save(d){validate(d);const text=JSON.stringify(d,null,2);const task=saving.then(async()=>{await fs.copyFile(contentPath,path.join(DATA,'content.bak.json'));const tmp=path.join(DATA,'content.tmp');await fs.writeFile(tmp,text);await fs.rename(tmp,contentPath);cache.clear();const warnings=[];try{database.put(d.books,{manual:true});}catch(error){database.log('database','','Site içeriği kaydedildi, kitap arşivine yazılamadı: '+error.message);warnings.push('Site içeriği kaydedildi ancak yerel kitap arşivi güncellenemedi. Tanılama kayıtlarını kontrol edin.');}return warnings.length?{warnings}:{};});saving=task.catch(()=>{});return task;}
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.webp':'image/webp'};
 const pages=new Set(['index.html','kitap.html','admin.html','panel.html','admin.js','script.js','book.js','admin.css','style.css']);
 async function handler(req,res){
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');res.setHeader('X-Frame-Options','DENY');
+  let route='';
   try{
-    const u=new URL(req.url,'http://localhost');let route=u.pathname;if(route==='/save.ashx'){const action=u.searchParams.get('action');route=action==='content'?'/content.json':action==='books'?'/api/books':action==='prices'?'/api/prices':'/api/admin';}
+    const u=new URL(req.url,'http://localhost');route=u.pathname;if(route==='/save.ashx'){const action=u.searchParams.get('action');route=action==='content'?'/content.json':action==='books'?'/api/books':action==='prices'?'/api/prices':action==='diagnostics'?'/api/diagnostics':action==='local-books'?'/api/local-books':'/api/admin';}
     if(req.method==='POST'&&!sameOrigin(req))return reply(res,403,{ok:false,msg:'İstek kaynağı geçersiz.'});
     if(route==='/api/admin'){
       if(req.method!=='POST')return reply(res,405,{ok:false,msg:'POST gerekli.'});
@@ -53,7 +56,8 @@ async function handler(req,res){
       }
       const token=authenticated(req);if(!token)return reply(res,401,{ok:false,msg:'Oturum süresi doldu. Yeniden giriş yapın.'});
       if(action==='logout'){sessions.delete(token);res.setHeader('Set-Cookie','bn_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return reply(res,200,{ok:true});}
-      if(action==='save'){const d=JSON.parse((await body(req)).toString('utf8'));await save(d);return reply(res,200,{ok:true,msg:'Kaydedildi'});}
+      if(action==='diagnostics-clear'){database.clearDiagnostics();return reply(res,200,{ok:true});}
+      if(action==='save'){const d=JSON.parse((await body(req)).toString('utf8'));const result=await save(d);return reply(res,200,{ok:true,msg:'Kaydedildi',...result});}
       if(action==='upload'){
         const type=req.headers['content-type'], ext={'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp'}[type];
         if(!ext) return reply(res,400,{ok:false,msg:'JPG, PNG veya WebP seçin.'});
@@ -67,14 +71,19 @@ async function handler(req,res){
     if(req.method!=='GET'&&req.method!=='HEAD')return reply(res,405,{ok:false,msg:'Yöntem desteklenmiyor.'});
     if(route==='/api/books'){
       if(!authenticated(req))return reply(res,401,{ok:false,msg:'Giriş gerekli.'});
-      const result=await lookupBooks(u.searchParams.get('q'),undefined,{title:u.searchParams.get('title')||'',author:u.searchParams.get('author')||'',isbn:u.searchParams.get('isbn')||'',language:u.searchParams.get('lang')==='all'?'all':'tr'});return reply(res,200,result);
+      const context={title:u.searchParams.get('title')||'',author:u.searchParams.get('author')||'',isbn:u.searchParams.get('isbn')||'',language:u.searchParams.get('lang')==='all'?'all':'tr'};
+      const result=await database.lookup(u.searchParams.get('q'),context,(query,provided)=>lookupBooks(query,undefined,provided),u.searchParams.get('refresh')==='1');return reply(res,200,result);
+    }
+    if(route==='/api/diagnostics'||route==='/api/local-books'){
+      if(!authenticated(req))return reply(res,401,{ok:false,msg:'Giriş gerekli.'});
+      return reply(res,200,route==='/api/diagnostics'?{entries:database.diagnostics(),database:database.status()}:database.list(u.searchParams.get('q')||''));
     }
     if(route==='/api/prices'){
       const d=await content(),b=d.books.find(b=>slug(b.title)===u.searchParams.get('book'));
       if(!b)return reply(res,404,{ok:false,msg:'Kitap bulunamadı.'});
       const key=JSON.stringify([b.isbn,b.title,b.author,b.priceUrls,b.buyUrl]);let result=cache.get(key);
       if(!result||result.until<Date.now()){
-        if(!pending.has(key))pending.set(key,comparePrices(b,{enabled:process.env.PRICE_FETCH_ENABLED!=='false'}).then(data=>{const entry={until:Date.now()+(data.offers.length?300000:30000),data};cache.set(key,entry);return entry;}).finally(()=>pending.delete(key)));
+        if(!pending.has(key))pending.set(key,comparePrices(b,{enabled:process.env.PRICE_FETCH_ENABLED!=='false'}).then(data=>{for(const warning of data.warnings||[])database.log('prices',b.title,warning);const {offers,searches,checkedAt,scope}=data;const entry={until:Date.now()+(offers.length?300000:30000),data:{offers,searches,checkedAt,scope}};cache.set(key,entry);return entry;}).finally(()=>pending.delete(key)));
         result=await pending.get(key);
       }
       return reply(res,200,result.data);
@@ -85,7 +94,11 @@ async function handler(req,res){
     else if(/^img\/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|webp)$/.test(name)){file=path.join(DATA,name);try{await fs.access(file);}catch{file=path.join(ROOT,name);}}
     else return reply(res,404,{ok:false,msg:'Bulunamadı.'});
     const b=await fs.readFile(file);res.writeHead(200,{'Content-Type':mime[path.extname(name)],'Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:b);
-  }catch(e){reply(res,e.status|| (e.code==='ENOENT'?404:400),{ok:false,msg:e.code==='ENOENT'?'Bulunamadı.':e.message});}
+  }catch(e){
+    database.log(route==='/api/prices'?'prices':route==='/content.json'?'content':'request','',e.message);
+    const privateRoute=['/api/admin','/api/books','/api/diagnostics','/api/local-books'].includes(route);
+    reply(res,e.status||(e.code==='ENOENT'?404:privateRoute?400:500),{ok:false,msg:e.code==='ENOENT'?'Bulunamadı.':privateRoute?e.message:'İşlem şu anda tamamlanamıyor. Lütfen daha sonra tekrar deneyin.'});
+  }
 }
-async function main(){await fs.mkdir(path.join(DATA,'img'),{recursive:true});try{await fs.access(contentPath);}catch{await fs.copyFile(path.join(ROOT,'content.json'),contentPath);}const server=http.createServer(handler);server.listen(Number(process.env.PORT||3000),process.env.HOST||'0.0.0.0',()=>console.log('Book Nest sunucusu port '+server.address().port+' üzerinde hazır.'));}
+async function main(){await fs.mkdir(path.join(DATA,'img'),{recursive:true});try{await fs.access(contentPath);}catch{await fs.copyFile(path.join(ROOT,'content.json'),contentPath);}database=new LocalDatabase(DATA);database.seed((await content()).books);const server=http.createServer(handler);server.listen(Number(process.env.PORT||3000),process.env.HOST||'0.0.0.0',()=>console.log('Book Nest sunucusu port '+server.address().port+' üzerinde hazır.'));}
 main().catch(e=>{console.error(e.message);process.exit(1);});
