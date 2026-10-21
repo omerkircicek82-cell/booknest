@@ -5,10 +5,11 @@ import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 
 test('HTTP site, authentication, model status and streamed chat',async()=>{
+  let received;
   const mock=http.createServer(async(req,res)=>{
     if(req.url==='/api/tags'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({models:[{name:'deepseek-r1:latest'}]}));}
     let body='';for await(const chunk of req)body+=chunk;
-    const data=JSON.parse(body);assert.equal(data.model,'deepseek-r1');assert.equal(data.messages[0].content,'Merhaba');
+    const data=JSON.parse(body);received=data;assert.equal(data.model,'deepseek-r1');assert.equal(data.messages.find(m=>m.role==='user').content,'Merhaba');
     res.setHeader('Content-Type','application/x-ndjson');res.write(JSON.stringify({message:{thinking:'Düşünce',content:''},done:false})+'\n');res.end(JSON.stringify({message:{content:'Merhaba!'},done:true})+'\n');
   });
   mock.listen(0,'127.0.0.1');await once(mock,'listening');
@@ -22,6 +23,10 @@ test('HTTP site, authentication, model status and streamed chat',async()=>{
     assert.equal((await fetch(url+'/api/status')).status,401);
     assert.deepEqual(await (await fetch(url+'/api/status',{headers})).json(),{model:'deepseek-r1',ready:true});
     const reply=await fetch(url+'/api/chat',{method:'POST',headers,body:JSON.stringify({messages:[{role:'user',content:'Merhaba'}]})});assert.equal(reply.status,200);const lines=(await reply.text()).trim().split('\n').map(JSON.parse);assert.equal(lines[1].message.content,'Merhaba!');assert.equal(lines[1].done,true);
+    assert.equal(received.messages.length,1);
+    assert.equal((await fetch(url+'/eglence')).status,200);
+    const fun=await fetch(url+'/api/chat',{method:'POST',headers,body:JSON.stringify({mode:'fun',messages:[{role:'user',content:'Merhaba'}]})});
+    await fun.text();assert.equal(received.messages[0].role,'system');assert.match(received.messages[0].content,/aptülfettah oğulları/);
     assert.equal((await fetch(url+'/api/chat',{method:'POST',headers,body:'{"messages":[]}'})).status,400);
     assert.equal((await fetch(url+'/api/chat',{method:'POST',headers:{...headers,Origin:'https://other.example'},body:'{}'})).status,403);
     await new Promise(r=>mock.close(r));assert.equal((await fetch(url+'/api/status',{headers})).status,503);

@@ -33,3 +33,7 @@ Nginx kullanıyorsanız yanıt tamponlamasını kapatın (`proxy_buffering off`)
 - Gerçek model yanıtı için sunucunuzdaki Ollama'nın çalışması ve seçilen modelin indirilmiş olması gerekir. Bulut geliştirme ortamı kişisel sunucunuza otomatik erişemez.
 
 `npm test` HTTP sunucusunu geçici bir Ollama taklidiyle sınar; gerçek model kalitesini/donanımı doğrulamaz.
+
+## Eğlence modu
+
+Site adresinin sonuna `/eglence` ekleyin (yerelde `http://localhost:3000/eglence`). Yanıtlar “aptülfettah oğulları,” hitabıyla gösterilir ve modele samimi, eğlenceli bir üslup talimatı gönderilir. Bu modun sohbet geçmişi ayrı saklanır. Normal moda dönmek için `/` adresini açın. Bu bağlantı gizli erişim anahtarı değildir; mevcut erişim parolası burada da geçerlidir.

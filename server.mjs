@@ -9,6 +9,8 @@ const model = process.env.OLLAMA_MODEL || 'deepseek-r1';
 const base = (process.env.OLLAMA_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
 const password = process.env.ACCESS_PASSWORD;
 const files = {'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+files['/eglence'] = files['/'];
+files['/eglence/'] = files['/'];
 const json = (res, status, value) => { res.writeHead(status, {'Content-Type':'application/json; charset=utf-8'}); res.end(JSON.stringify(value)); };
 http.createServer(async (req,res) => {
   res.setHeader('X-Content-Type-Options','nosniff');
@@ -36,14 +38,15 @@ http.createServer(async (req,res) => {
       let size = 0, chunks = [];
       try {
         for await (const chunk of req) { size += chunk.length; if(size > 131072) return json(res,413,{error:'Sohbet çok uzun. Yeni sohbet başlatın.'}); chunks.push(chunk); }
-        const {messages} = JSON.parse(Buffer.concat(chunks));
+        const {messages, mode} = JSON.parse(Buffer.concat(chunks));
         if (!Array.isArray(messages) || !messages.length || messages.length > 80 || messages.some(m => !['user','assistant'].includes(m.role) || typeof m.content !== 'string' || m.content.length > 20000)) return json(res,400,{error:'Geçersiz mesajlar.'});
+        const modelMessages = mode === 'fun' ? [{role:'system',content:'Türkçe, samimi ve eğlenceli bir yardımcı olarak yanıt ver. Kullanıcının hitap adı aptülfettah oğulları. Arayüz her yanıtının başına bu hitabı otomatik ekler; hitabı tekrar yazmadan soruyu doğrudan yanıtla. Bilgileri doğru ve anlaşılır aktar.'}, ...messages] : messages;
         const controller = new AbortController();
         const disconnected = () => controller.abort();
         res.on('close',disconnected);
         const timer = setTimeout(()=>controller.abort(),600000);
         try {
-          const upstream = await fetch(`${base}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,messages,stream:true}),signal:controller.signal});
+          const upstream = await fetch(`${base}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,messages:modelMessages,stream:true}),signal:controller.signal});
           if (!upstream.ok) return json(res,502,{error:'Model yanıt veremedi. Ollama model ayarını kontrol edin.'});
           res.writeHead(200,{'Content-Type':'application/x-ndjson','X-Accel-Buffering':'no'});
           for await (const chunk of upstream.body) {
