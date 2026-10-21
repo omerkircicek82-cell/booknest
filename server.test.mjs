@@ -27,6 +27,11 @@ test('HTTP site, authentication, model status and streamed chat',async()=>{
     assert.equal((await fetch(url+'/eglence')).status,200);
     const fun=await fetch(url+'/api/chat',{method:'POST',headers,body:JSON.stringify({mode:'fun',messages:[{role:'user',content:'Merhaba'}]})});
     await fun.text();assert.equal(received.messages[0].role,'system');assert.match(received.messages[0].content,/aptülfettah oğulları/);
+    assert.equal((await fetch(url+'/game')).status,200);
+    const game=await fetch(url+'/api/chat',{method:'POST',headers,body:JSON.stringify({mode:'game',messages:[{role:'user',content:'Merhaba'}]})});
+    await game.text();assert.match(received.messages[0].content,/yalnızca ipucu/);
+    const won=await fetch(url+'/api/chat',{method:'POST',headers,body:JSON.stringify({mode:'game',messages:[{role:'user',content:'Merhaba'},{role:'user',content:' KÖYLÜ  MİLLETİN EFENDİSİDİR. '},{role:'user',content:'Merhaba'}]})});
+    await won.text();assert.match(received.messages[0].content,/oyunu tamamladı/);assert.match(received.messages[0].content,/hitabını kullanma/);
     assert.equal((await fetch(url+'/api/chat',{method:'POST',headers,body:'{"messages":[]}'})).status,400);
     assert.equal((await fetch(url+'/api/chat',{method:'POST',headers:{...headers,Origin:'https://other.example'},body:'{}'})).status,403);
     await new Promise(r=>mock.close(r));assert.equal((await fetch(url+'/api/status',{headers})).status,503);

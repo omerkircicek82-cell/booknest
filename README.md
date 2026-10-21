@@ -37,3 +37,7 @@ Nginx kullanıyorsanız yanıt tamponlamasını kapatın (`proxy_buffering off`)
 ## Eğlence modu
 
 Site adresinin sonuna `/eglence` ekleyin (yerelde `http://localhost:3000/eglence`). Yanıtlar “aptülfettah oğulları,” hitabıyla gösterilir ve modele samimi, eğlenceli bir üslup talimatı gönderilir. Bu modun sohbet geçmişi ayrı saklanır. Normal moda dönmek için `/` adresini açın. Bu bağlantı gizli erişim anahtarı değildir; mevcut erişim parolası burada da geçerlidir.
+
+## Gizli ifade oyunu
+
+`/game` adresinde oyun başlar. Mesaj gönderin veya ipucu isteyin; model cevapla birlikte ipucu verir. Gizli ifadeyi tek mesajda doğru yazınca o sohbette özel hitap biter. Büyük/küçük harf, fazla boşluk ve sondaki noktalama farkları kabul edilir. Yeni sohbet yeni oyun başlatır. Oyun geçmişi diğer modlardan ayrıdır. Bu bir eğlence oyunudur; model ipuçlarının gizliliği bir güvenlik mekanizması değildir.

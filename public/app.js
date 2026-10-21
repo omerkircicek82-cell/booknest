@@ -2,7 +2,10 @@ const $ = id => document.getElementById(id);
 // randomUUID is unavailable on plain HTTP LAN addresses; this ID is only for local history.
 const chatId = () => globalThis.crypto?.randomUUID?.() || `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const funMode = /^\/eglence\/?$/.test(globalThis.location?.pathname || '/');
-const storageKey = funMode ? 'booknest-fun-chats' : 'booknest-chats';
+const gameMode = /^\/game\/?$/.test(globalThis.location?.pathname || '/');
+const normalizeAnswer = value => value.trim().toLocaleLowerCase('tr-TR').replace(/[.!?…]+$/u,'').trim().replace(/\s+/g,' ');
+const isSolved = () => gameMode && !!current?.messages.some(m => m.role === 'user' && normalizeAnswer(m.content) === 'köylü milletin efendisidir');
+const storageKey = gameMode ? 'booknest-game-chats' : funMode ? 'booknest-fun-chats' : 'booknest-chats';
 let chats = [];
 try { chats = JSON.parse(localStorage.getItem(storageKey) || '[]'); if (!Array.isArray(chats)) chats=[]; chats=chats.filter(c=>typeof c.id==='string' && Array.isArray(c.messages)); } catch {}
 let current = null, controller = null, password = sessionStorage.getItem('booknest-password') || '';
@@ -14,7 +17,7 @@ function history() {
 }
 function bubble(message) {
   const el = document.createElement('article');el.className=`message ${message.role}`;
-  const content=document.createElement('div');content.textContent=(funMode && message.role === 'assistant' && message.content ? 'aptülfettah oğulları, ' : '') + message.content;el.append(content);
+  const content=document.createElement('div');content.textContent=((funMode || (gameMode && message.gameAddress)) && message.role === 'assistant' && message.content ? 'aptülfettah oğulları, ' : '') + message.content;el.append(content);
   let thinking=null;
   if (message.thinking) {const details=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Düşünme süreci';thinking=document.createElement('div');thinking.textContent=message.thinking;details.append(summary,thinking);el.append(details);}
   $('messages').append(el);return {el,content,thinking};
@@ -36,18 +39,19 @@ $('composer').onsubmit=async e=>{
   if(!current){current={id:chatId(),messages:[]};chats.unshift(current);}
   current.messages.push({role:'user',content:prompt});$('prompt').value='';$('error').textContent='';persist();render();
   const previous=current.messages.map(({role,content})=>({role,content}));
-  const reply={role:'assistant',content:'',thinking:''};current.messages.push(reply);let view=bubble(reply);
+  const reply={role:'assistant',content:'',thinking:'',gameAddress:gameMode && !isSolved()};current.messages.push(reply);let view=bubble(reply);
   controller=new AbortController();$('send').hidden=true;$('stop').hidden=false;
   let completed=false;
   try {
-    const response=await fetch('/api/chat',{method:'POST',headers:headers(),body:JSON.stringify({messages:previous,mode:funMode?'fun':'normal'}),signal:controller.signal});
+    const response=await fetch('/api/chat',{method:'POST',headers:headers(),body:JSON.stringify({messages:previous,mode:gameMode?'game':funMode?'fun':'normal'}),signal:controller.signal});
     if(!response.ok){const error=await response.json();throw new Error(error.error || 'İstek başarısız.');}
     const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
-    const consume=line=>{if(!line.trim())return;const data=JSON.parse(line);if(data.error)throw new Error(data.error);reply.content+=data.message?.content || '';reply.thinking+=data.message?.thinking || '';view.content.textContent=reply.content ? (funMode ? 'aptülfettah oğulları, ' : '') + reply.content : 'Düşünüyor…';if(reply.thinking){if(!view.thinking){view.el.remove();view=bubble(reply);}else view.thinking.textContent=reply.thinking;}if(data.done)completed=true;};
+    const consume=line=>{if(!line.trim())return;const data=JSON.parse(line);if(data.error)throw new Error(data.error);reply.content+=data.message?.content || '';reply.thinking+=data.message?.thinking || '';view.content.textContent=reply.content ? (funMode || reply.gameAddress ? 'aptülfettah oğulları, ' : '') + reply.content : 'Düşünüyor…';if(reply.thinking){if(!view.thinking){view.el.remove();view=bubble(reply);}else view.thinking.textContent=reply.thinking;}if(data.done)completed=true;};
     while(true){const {value,done}=await reader.read();buffer+=decoder.decode(value,{stream:!done});let boundary;while((boundary=buffer.indexOf('\n'))>=0){consume(buffer.slice(0,boundary));buffer=buffer.slice(boundary+1);}if(done){if(buffer.trim())consume(buffer);break;}}
     if(!completed)throw new Error('Yanıt tamamlanmadan bağlantı kesildi.');
   } catch(error){$('error').textContent=error.name==='AbortError'?'Yanıt durduruldu.':error.message;}
   finally {if(!reply.content&&!reply.thinking){current.messages.pop();view.el.remove();}persist();controller=null;$('send').hidden=false;$('stop').hidden=true;history();}
 };
+if(gameMode){document.title='Booknest AI — Gizli ifade oyunu';document.querySelector('.eyebrow').textContent='GİZLİ İFADE OYUNU';document.querySelector('#welcome p').textContent='aptülfettah oğulları, bu hitaptan kurtulmanın bir yolu var! Gizli ifadeyi bul. İpucu isteyerek başlayabilirsin.';}
 if(funMode){document.title='Booknest AI — Eğlence modu';document.querySelector('.eyebrow').textContent='EĞLENCE MODU · aptülfettah oğulları';}
 render();status();
