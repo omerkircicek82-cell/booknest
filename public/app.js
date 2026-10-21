@@ -1,4 +1,6 @@
 const $ = id => document.getElementById(id);
+// randomUUID is unavailable on plain HTTP LAN addresses; this ID is only for local history.
+const chatId = () => globalThis.crypto?.randomUUID?.() || `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 let chats = [];
 try { chats = JSON.parse(localStorage.getItem('booknest-chats') || '[]'); if (!Array.isArray(chats)) chats=[]; chats=chats.filter(c=>typeof c.id==='string' && Array.isArray(c.messages)); } catch {}
 let current = null, controller = null, password = sessionStorage.getItem('booknest-password') || '';
@@ -29,7 +31,7 @@ document.querySelectorAll('[data-prompt]').forEach(b=>b.onclick=()=>{$('prompt')
 $('prompt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('composer').requestSubmit();}});
 $('composer').onsubmit=async e=>{
   e.preventDefault();const prompt=$('prompt').value.trim();if(!prompt||controller)return;
-  if(!current){current={id:crypto.randomUUID(),messages:[]};chats.unshift(current);}
+  if(!current){current={id:chatId(),messages:[]};chats.unshift(current);}
   current.messages.push({role:'user',content:prompt});$('prompt').value='';$('error').textContent='';persist();render();
   const previous=current.messages.map(({role,content})=>({role,content}));
   const reply={role:'assistant',content:'',thinking:''};current.messages.push(reply);let view=bubble(reply);
