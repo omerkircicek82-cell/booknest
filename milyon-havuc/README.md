@@ -53,7 +53,7 @@ dotnet run --project Tests/Rules.csproj -- --simulate
 
 Bulut ortamında SDK `/workspace/.milyon-tools/dotnet/dotnet` konumuna kuruldu. Gerektiğinde `DOTNET_CLI_HOME=/workspace/.milyon-tools` kullanılır. Testler harici test paketi gerektirmeyen, başarısızlıkta sıfırdan farklı çıkış kodu veren bir konsol koşucusudur. NUnit/Unity Test Runner testleri değildir.
 
-**Doğrulandı:** 17 kural testi, küçük dünyada uçtan uca tamamlama, üç tam milyonluk deterministik ekonomi simülasyonu. Mevcut web uygulamasının iki testi de geçti. Runtime ve Core C# dosyaları ayrıca Unity 2021.3 referans derlemeleriyle sözdizimi/API kontrolünden geçti; bu, Unity 6 Editor derlemesi veya PlayMode testi yerine geçmez.
+**Doğrulandı:** 23 kural testi, küçük dünyada uçtan uca tamamlama, üç tam milyonluk deterministik ekonomi simülasyonu. Mevcut web uygulamasının iki testi de geçti. Runtime ve Core C# dosyaları ayrıca Unity 2021.3 referans derlemeleriyle sözdizimi/API kontrolünden geçti; bu, Unity 6 Editor derlemesi veya PlayMode testi yerine geçmez.
 
 **Bu ortamda çalıştırılmadı:** Unity paket çözümlemesi, Editor betiğinin Unity 6'da derlenmesi, sahnenin gerçek oynanışı, grafik/ses davranışı, Windows build, hedef PC performansı, yeni oyuncu oturumları. Unity Editor ve lisanslı build ortamı bulunmadığı için bu proje henüz doğrulanmış Windows dağıtımı değildir.
 
@@ -84,3 +84,11 @@ Derleme sonucu kontrol edilir; başarısız rapor hata üretir. Bu komut mevcut 
 ## Kalan ürün işi
 
 Bu sürüm bir geliştirme prototipidir. İnsan oynanış testleri, Unity 6 sahne doğrulaması, Windows dağıtımı ve performans ölçümü tamamlanmalıdır. [Denge raporu](docs/BALANCE.md) simülasyonun varsayımlarını ve hedef süreden sapmaları açıklar. Botların görsel hareketleri basit hedef takibidir; gerçek yol/şerit navigasyonu ve görsel taşıma animasyonları placeholder düzeyindedir. Bölgelerin kimliği toprak rengiyle sınırlıdır. Serbest bina yerleştirme, ekim ve çevrimdışı üretim kapsam dışıdır.
+
+## Tarla günlüğü güncellemesi
+
+- 12 başarım: ilk kök, ilk kazanç, ilk ekipmanlar, ilk robot, parsel temizliği, filo ve kampanya finali. Rozetler mevcut kayıt sayaçlarından türetilir; para, XP veya ekstra havuç üretmez. Eski kayıtta açılan rozetler görünür, bildirimler tekrar oynatılmaz.
+- HUD üzerinde ilerlemeye göre değişen hedef rehberi ve hasatta toplanan miktar bildirimi.
+- Tab → Tarla günlüğü: son 60 saniyeye kadar işleme hızı, dakikalık gelir, dolu hazne/boş öğütücü teşhisi ve başarım kartları. Pencere yalnızca oynarken ilerler; kayıt açıldığında yeni ölçüm başlar.
+- Mevcut projeye geçiş için depodaki `milyon-havuc-guncelleme.zip` yalnızca `FarmGame.cs` ve yeni `FarmJournal.cs` dosyalarını içerir. `Campaign.cs`, kişisel modeller ve materyaller pakette yoktur. Önce kendi projenin yedeğini al; Unity kapalıyken ZIP'in Assets klasörünü proje kökündeki Assets ile birleştir. FarmGame.cs üzerinde kendi değişikliklerin varsa bu dosyayı doğrudan değiştirmek yerine farkları birleştir.
+- Eklenen altı test ile toplam 23 kural testi geçti; referans derlemeleriyle C# kontrolü hatasız. Unity 6 görsel doğrulaması bu ortamda henüz yapılamadı.

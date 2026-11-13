@@ -11,6 +11,11 @@ namespace MilyonHavuc.Runtime
     public sealed class FarmGame : MonoBehaviour
     {
         Campaign state;
+        ProductionMonitor production;
+        readonly HashSet<string> announced=new HashSet<string>();
+        readonly Queue<string> achievementToasts=new Queue<string>();
+        float harvestFlash;
+        int lastHarvest;
         readonly HarvestAction harvestAction=new HarvestAction();
         SaveStore saves;
         Camera eye;
@@ -112,7 +117,8 @@ namespace MilyonHavuc.Runtime
             if(load){try{state=saves.Load(out bool backup);if(backup)Notify("Yedek kayıt kurtarıldı.");loadError=false;}catch(Exception ex){error=ex.Message;loadError=true;return;}}
             else state=Campaign.New(smallWorld?10000:1000000);
             WatchState();ClearChunks();controller.enabled=false;Vector3 pos=new Vector3(state.PlayerX,0,state.PlayerZ);if(float.IsNaN(pos.x)||float.IsNaN(pos.z)||pos.x< -12||pos.z< -12||pos.x>610||pos.z>610)pos=GrinderPosition+Vector3.forward*3;player.transform.position=pos;controller.enabled=true;yaw=float.IsNaN(state.LookYaw)||float.IsInfinity(state.LookYaw)?0:state.LookYaw;pitch=float.IsNaN(state.LookPitch)||float.IsInfinity(state.LookPitch)?60:Mathf.Clamp(state.LookPitch,-75,80);if(!load)pitch=60;
-            harvestAction.Cancel();stepClock=0;menu=false;paused=false;finalShown=false;confirmNew=false;saveClock=0;Lock(true);
+            production=new ProductionMonitor(state);announced.Clear();achievementToasts.Clear();foreach(var badge in FarmJournal.Achievements)if(badge.Unlocked(state))announced.Add(badge.Id);
+            harvestFlash=0;harvestAction.Cancel();stepClock=0;menu=false;paused=false;finalShown=false;confirmNew=false;saveClock=0;Lock(true);
             Notify(load?"Tarlana hoş geldin. Kaldığın yerden devam.":"Sol tuşu basılı tut ve ilk havucu sök.");
         }
         void Lock(bool locked){Cursor.lockState=locked?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!locked;harvestToggle=false;harvestAction.Cancel();action=0;}
@@ -124,7 +130,8 @@ namespace MilyonHavuc.Runtime
         }
         void Update()
         {
-            float dt=Mathf.Min(Time.deltaTime,.1f);toastClock=Mathf.Max(0,toastClock-dt);
+            float dt=Mathf.Min(Time.deltaTime,.1f);toastClock=Mathf.Max(0,toastClock-dt);harvestFlash=Mathf.Max(0,harvestFlash-dt);
+            if(!menu&&toastClock<=0&&achievementToasts.Count>0)Notify(achievementToasts.Dequeue());
             if(menu){eye.transform.rotation=Quaternion.Euler(22,25,0);return;}
             if(Input.GetKeyDown(KeyCode.Escape)){paused=!paused;Lock(!paused);if(paused)Save();}
             if(Input.GetKeyDown(KeyCode.Tab)){paused=!paused;tab=0;Lock(!paused);}
@@ -141,13 +148,14 @@ namespace MilyonHavuc.Runtime
             bool held=toggleHarvest?harvestToggle:Input.GetMouseButton(0);
             int picked=harvestAction.Advance(state,target,held&&!state.Riding,target>=0,dt);
             action=(float)harvestAction.Progress;
-            if(picked>0){Sound(pullSound);if(state.HandTotal==1)Notify("Arkandaki öğütücüye yaklaş ve E ile dök.");}
+            if(picked>0){lastHarvest=picked;harvestFlash=1.1f;Sound(pullSound);if(state.HandTotal==1)Notify("Arkandaki öğütücüye yaklaş ve E ile dök.");}
             stepClock+=dt;
             while(stepClock>=.25f)
             {
                 stepClock-=.25f;
                 if(state.Riding&&move.sqrMagnitude>.01f&&target>=0){state.TractorCredit+=(state.Has("tractor_head")?155:110)*.25;int n=(int)state.TractorCredit;state.TractorCredit-=n;state.Harvest(target,n,true);}else state.TractorCredit=0;
-                int oldParcel=state.ActiveParcel,oldBot=state.BotTotal,oldProcessed=state.Processed;state.Step();
+                int oldParcel=state.ActiveParcel,oldBot=state.BotTotal,oldProcessed=state.Processed;state.Step();production.Sample(state);
+                foreach(var badge in FarmJournal.Achievements)if(badge.Unlocked(state)&&announced.Add(badge.Id))achievementToasts.Enqueue("BAŞARIM AÇILDI · "+badge.Name);
                 if(oldParcel!=state.ActiveParcel){Notify("Yeni parsel açıldı · "+(state.ActiveParcel+1));Save();}
                 if(oldProcessed==0&&state.Processed>0){Notify("+1 ₵ · +1 XP  —  Tab ile dükkânı aç.");Sound(grindSound);}
                 if(state.Ground==0&&!state.Won&&oldBot!=state.BotTotal)Notify("Tarla temiz. Son havuçları öğütücüye ulaştır.");
@@ -254,8 +262,11 @@ namespace MilyonHavuc.Runtime
             Fill(new Rect(25,24,430,110),Ink);Text(new Rect(45,37,380,30),"MİLYON HAVUÇ",sub);Text(new Rect(45,71,385,24),"İşlenen  "+Count(state.Processed)+" / "+Count(state.Total));Bar(new Rect(45,109,385,5),state.Processed/(float)state.Total,Orange);
             Fill(new Rect(w-300,24,275,110),Ink);Text(new Rect(w-280,35,240,30),Money(state.Money),sub);int next=Catalog.Xp.FirstOrDefault(x=>x>state.Xp);Text(new Rect(w-280,73,240,45),"Seviye "+state.Level+" · "+state.Points+" beceri puanı\n"+(next>0?Count(next-state.Xp)+" XP → sonraki seviye":"Tüm XP eşikleri tamamlandı"),small);
             Text(new Rect(45,147,700,26),"TOPRAKTA "+Count(state.Ground)+"   ·   PARSEL "+(state.ActiveParcel+1).ToString("00")+" / "+state.Remaining.Length+"   ·   KALAN "+Count(state.Remaining[state.ActiveParcel]),small);
+            Fill(new Rect(w-430,150,405,105),Ink);Text(new Rect(w-410,160,365,20),"SIRADAKİ HEDEF",small);Text(new Rect(w-410,186,365,60),FarmJournal.NextGoal(state),small);
             if(!paused)
             {
+                if(harvestFlash>0)Text(new Rect(w/2-95,h/2-55,240,35),"+"+lastHarvest+" havuç → çanta",sub);
+
                 Fill(new Rect(w/2-2,h/2-2,4,4),target>=0?Orange:Cream);
                 if(action>0)Bar(new Rect(w/2-35,h/2+20,70,5),(float)(action/state.HarvestTime),Orange);
                 string hint="";
@@ -277,9 +288,9 @@ namespace MilyonHavuc.Runtime
         {
             float x=(w-1160)/2,y=70;Text(new Rect(x,y,900,45),tab==5?"TARLA ARTIK BOŞ.":"TARLANIN KONTROLÜ SENDE",title);
             if(Btn(new Rect(x+970,y,190,40),"Tarlaya dön  ×")){paused=false;Lock(true);}
-            string[] tabs={"Dükkân","Beceriler","Tarla haritası","Filo","Ayarlar ve kayıt"};for(int i=0;i<5;i++)if(Btn(new Rect(x+i*228,y+65,218,42),(tab==i?"● ":"")+tabs[i])){tab=i;scroll=Vector2.zero;}
+            string[] tabs={"Dükkân","Beceriler","Tarla haritası","Filo","Tarla günlüğü","Ayarlar ve kayıt"};int[] pages={0,1,2,3,6,4};for(int i=0;i<tabs.Length;i++)if(Btn(new Rect(x+i*193,y+65,183,42),(tab==pages[i]?"● ":"")+tabs[i])){tab=pages[i];scroll=Vector2.zero;}
             Rect content=new Rect(x,y+135,1160,h-260);
-            if(tab==0)Shop(content);else if(tab==1)Skills(content);else if(tab==2)Map(content);else if(tab==3)Fleet(content);else if(tab==4)Settings(content);else Victory(content);
+            if(tab==0)Shop(content);else if(tab==1)Skills(content);else if(tab==2)Map(content);else if(tab==3)Fleet(content);else if(tab==4)Settings(content);else if(tab==6)Journal(content);else Victory(content);
             Text(new Rect(x,h-60,1160,30),"Dünya duraklatıldı · Otomasyon ve kampanya süresi menü açıkken ilerlemez.",small);
         }
         void Shop(Rect r)
@@ -349,6 +360,26 @@ namespace MilyonHavuc.Runtime
             if(Btn(new Rect(r.x+330,r.y+320,300,45),"Kampanyayı kaydet")){Save();Notify("Kampanya kaydedildi.");}
             if(Btn(new Rect(r.x,r.y+385,300,45),"Kaydet ve ana menü")){Save();menu=true;paused=false;Lock(false);}
             Text(new Rect(r.x+760,r.y+60,350,220),"KAYIT HAKKINDA\n\n60 saniyede bir otomatik kayıt.\nÖnemli alışveriş ve parsel açılışında kayıt.\nBir önceki sağlam kayıt yedeklenir.\nKapalıyken üretim ilerlemez.",small);
+        }
+        void Journal(Rect r)
+        {
+            int unlocked=FarmJournal.Achievements.Count(a=>a.Unlocked(state));
+            Fill(new Rect(r.x,r.y,r.width-20,105),Ink);
+            Text(new Rect(r.x+18,r.y+12,450,28),"ÜRETİM RAPORU · "+production.WindowSeconds.ToString("0")+" sn örnek",sub);
+            Text(new Rect(r.x+18,r.y+48,450,30),production.Rate.ToString("0.00")+" havuç/s   ·   "+production.IncomePerMinute.ToString("N1")+" ₵/dk",label);
+            Text(new Rect(r.x+500,r.y+16,600,75),ProductionMonitor.Diagnosis(state),label);
+            Text(new Rect(r.x,r.y+120,1000,30),"BAŞARIMLAR  "+unlocked+" / "+FarmJournal.Achievements.Length+"  ·  Hatıra rozetleri; para veya XP vermez.",small);
+            scroll=GUI.BeginScrollView(new Rect(r.x,r.y+165,r.width,r.height-165),scroll,new Rect(0,0,r.width-25,6*116));
+            for(int i=0;i<FarmJournal.Achievements.Length;i++)
+            {
+                var a=FarmJournal.Achievements[i];bool done=a.Unlocked(state);float x=i%2*565,y=i/2*116;
+                Fill(new Rect(x,y,550,103),Ink);Fill(new Rect(x,y,4,103),done?Orange:Green);
+                Text(new Rect(x+18,y+10,510,30),(done?"✓ ":"○ ")+a.Name,sub);
+                Text(new Rect(x+18,y+43,510,25),a.Description,small);
+                Bar(new Rect(x+18,y+83,420,4),a.Progress(state)/(float)a.Target,done?Orange:Green);
+                Text(new Rect(x+445,y+72,95,25),a.Progress(state)+" / "+a.Target,small);
+            }
+            GUI.EndScrollView();
         }
         void Victory(Rect r)
         {
