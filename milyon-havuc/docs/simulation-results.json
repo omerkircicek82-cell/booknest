@@ -1,0 +1,533 @@
+[
+  {
+    "policy": "aktif",
+    "completed": true,
+    "minutes": 235.57,
+    "milestonesMinutes": {
+      "1000": 5.03,
+      "10000": 16.46,
+      "50000": 32.98,
+      "200000": 63.37,
+      "500000": 136.66
+    },
+    "purchases": [
+      {
+        "minutes": 0.33,
+        "id": "bucket_small",
+        "price": 18
+      },
+      {
+        "minutes": 0.83,
+        "id": "hoe",
+        "price": 35
+      },
+      {
+        "minutes": 1.5,
+        "id": "bucket_large",
+        "price": 80
+      },
+      {
+        "minutes": 2.5,
+        "id": "hopper",
+        "price": 130
+      },
+      {
+        "minutes": 3.25,
+        "id": "rake",
+        "price": 160
+      },
+      {
+        "minutes": 4.17,
+        "id": "basket",
+        "price": 300
+      },
+      {
+        "minutes": 5.67,
+        "id": "row_lifter",
+        "price": 640
+      },
+      {
+        "minutes": 7.17,
+        "id": "motor",
+        "price": 780
+      },
+      {
+        "minutes": 8.83,
+        "id": "cart",
+        "price": 1100
+      },
+      {
+        "minutes": 12.83,
+        "id": "power_lifter",
+        "price": 2800
+      },
+      {
+        "minutes": 15.17,
+        "id": "mobile",
+        "price": 3300
+      },
+      {
+        "minutes": 18.33,
+        "id": "trailer",
+        "price": 4800
+      },
+      {
+        "minutes": 23.17,
+        "id": "wide_head",
+        "price": 9500
+      },
+      {
+        "minutes": 26.67,
+        "id": "belt",
+        "price": 11000
+      },
+      {
+        "minutes": 31.58,
+        "id": "belt_pack",
+        "price": 16000
+      },
+      {
+        "minutes": 38.83,
+        "id": "root_vac",
+        "price": 26000
+      },
+      {
+        "minutes": 45,
+        "id": "dual_line",
+        "price": 38000
+      },
+      {
+        "minutes": 51.25,
+        "id": "bulk_bag",
+        "price": 42000
+      },
+      {
+        "minutes": 59.42,
+        "id": "tractor",
+        "price": 55000
+      },
+      {
+        "minutes": 82.33,
+        "id": "industrial",
+        "price": 100000
+      },
+      {
+        "minutes": 107.33,
+        "id": "tractor_head",
+        "price": 105000
+      },
+      {
+        "minutes": 144.42,
+        "id": "factory",
+        "price": 220000
+      }
+    ],
+    "finalMoney": 553282.8,
+    "grinderEmptyMinutes": 177.41,
+    "hopperFullMinutes": 0.02,
+    "lastThousandMinutes": 0.26,
+    "hand": 187761,
+    "bots": 0,
+    "tractor": 812239,
+    "processed": 1000000
+  },
+  {
+    "policy": "karma",
+    "completed": true,
+    "minutes": 115.57,
+    "milestonesMinutes": {
+      "1000": 5.25,
+      "10000": 15.72,
+      "50000": 30.67,
+      "200000": 54.83,
+      "500000": 83.8
+    },
+    "purchases": [
+      {
+        "minutes": 0.33,
+        "id": "bucket_small",
+        "price": 18
+      },
+      {
+        "minutes": 0.83,
+        "id": "hoe",
+        "price": 35
+      },
+      {
+        "minutes": 1.5,
+        "id": "bucket_large",
+        "price": 80
+      },
+      {
+        "minutes": 2.42,
+        "id": "hopper",
+        "price": 130
+      },
+      {
+        "minutes": 3.25,
+        "id": "rake",
+        "price": 160
+      },
+      {
+        "minutes": 4.25,
+        "id": "basket",
+        "price": 300
+      },
+      {
+        "minutes": 5.67,
+        "id": "bot_seed",
+        "price": 550
+      },
+      {
+        "minutes": 6.92,
+        "id": "row_lifter",
+        "price": 640
+      },
+      {
+        "minutes": 8,
+        "id": "bot_seed",
+        "price": 743
+      },
+      {
+        "minutes": 9.08,
+        "id": "motor",
+        "price": 780
+      },
+      {
+        "minutes": 10.33,
+        "id": "cart",
+        "price": 1100
+      },
+      {
+        "minutes": 13.42,
+        "id": "power_lifter",
+        "price": 2800
+      },
+      {
+        "minutes": 15.33,
+        "id": "mobile",
+        "price": 3300
+      },
+      {
+        "minutes": 17.75,
+        "id": "bot_row",
+        "price": 4200
+      },
+      {
+        "minutes": 19.83,
+        "id": "trailer",
+        "price": 4800
+      },
+      {
+        "minutes": 22.33,
+        "id": "bot_row",
+        "price": 5670
+      },
+      {
+        "minutes": 25.33,
+        "id": "wide_head",
+        "price": 9500
+      },
+      {
+        "minutes": 28,
+        "id": "belt",
+        "price": 11000
+      },
+      {
+        "minutes": 31.67,
+        "id": "bot_dig",
+        "price": 16000
+      },
+      {
+        "minutes": 34.67,
+        "id": "belt_pack",
+        "price": 16000
+      },
+      {
+        "minutes": 38.58,
+        "id": "bot_dig",
+        "price": 21600
+      },
+      {
+        "minutes": 42,
+        "id": "drone",
+        "price": 24000
+      },
+      {
+        "minutes": 45.5,
+        "id": "root_vac",
+        "price": 26000
+      },
+      {
+        "minutes": 49.58,
+        "id": "dual_line",
+        "price": 38000
+      },
+      {
+        "minutes": 53.92,
+        "id": "bulk_bag",
+        "price": 42000
+      },
+      {
+        "minutes": 59.42,
+        "id": "bot_auto",
+        "price": 55000
+      },
+      {
+        "minutes": 63.5,
+        "id": "tractor",
+        "price": 55000
+      },
+      {
+        "minutes": 68.75,
+        "id": "route_ai",
+        "price": 62000
+      },
+      {
+        "minutes": 75.25,
+        "id": "bot_auto",
+        "price": 74250
+      },
+      {
+        "minutes": 79.75,
+        "id": "sweep",
+        "price": 60000
+      },
+      {
+        "minutes": 86.42,
+        "id": "industrial",
+        "price": 100000
+      },
+      {
+        "minutes": 93.75,
+        "id": "tractor_head",
+        "price": 105000
+      },
+      {
+        "minutes": 102,
+        "id": "bot_heavy",
+        "price": 135000
+      },
+      {
+        "minutes": 109.75,
+        "id": "bot_heavy",
+        "price": 182250
+      }
+    ],
+    "finalMoney": 177752.15,
+    "grinderEmptyMinutes": 44.63,
+    "hopperFullMinutes": 0.04,
+    "lastThousandMinutes": 0.39,
+    "hand": 177309,
+    "bots": 637091,
+    "tractor": 185600,
+    "processed": 1000000
+  },
+  {
+    "policy": "otomasyon",
+    "completed": true,
+    "minutes": 104.3,
+    "milestonesMinutes": {
+      "1000": 5.73,
+      "10000": 16.81,
+      "50000": 32.59,
+      "200000": 56.29,
+      "500000": 80.36
+    },
+    "purchases": [
+      {
+        "minutes": 0.33,
+        "id": "bucket_small",
+        "price": 18
+      },
+      {
+        "minutes": 1,
+        "id": "hoe",
+        "price": 35
+      },
+      {
+        "minutes": 1.58,
+        "id": "bucket_large",
+        "price": 80
+      },
+      {
+        "minutes": 2.5,
+        "id": "hopper",
+        "price": 130
+      },
+      {
+        "minutes": 3.42,
+        "id": "rake",
+        "price": 160
+      },
+      {
+        "minutes": 4.5,
+        "id": "basket",
+        "price": 300
+      },
+      {
+        "minutes": 6.17,
+        "id": "bot_seed",
+        "price": 550
+      },
+      {
+        "minutes": 7.67,
+        "id": "row_lifter",
+        "price": 640
+      },
+      {
+        "minutes": 8.83,
+        "id": "bot_seed",
+        "price": 743
+      },
+      {
+        "minutes": 10,
+        "id": "motor",
+        "price": 780
+      },
+      {
+        "minutes": 11.25,
+        "id": "bot_seed",
+        "price": 990
+      },
+      {
+        "minutes": 12.33,
+        "id": "cart",
+        "price": 1100
+      },
+      {
+        "minutes": 15.08,
+        "id": "power_lifter",
+        "price": 2800
+      },
+      {
+        "minutes": 17.17,
+        "id": "mobile",
+        "price": 3300
+      },
+      {
+        "minutes": 19.33,
+        "id": "bot_row",
+        "price": 4200
+      },
+      {
+        "minutes": 21.42,
+        "id": "trailer",
+        "price": 4800
+      },
+      {
+        "minutes": 23.83,
+        "id": "bot_row",
+        "price": 5670
+      },
+      {
+        "minutes": 26.17,
+        "id": "bot_row",
+        "price": 7560
+      },
+      {
+        "minutes": 29,
+        "id": "wide_head",
+        "price": 9500
+      },
+      {
+        "minutes": 31.5,
+        "id": "belt",
+        "price": 11000
+      },
+      {
+        "minutes": 35.17,
+        "id": "bot_dig",
+        "price": 16000
+      },
+      {
+        "minutes": 38.08,
+        "id": "belt_pack",
+        "price": 16000
+      },
+      {
+        "minutes": 42.08,
+        "id": "bot_dig",
+        "price": 21600
+      },
+      {
+        "minutes": 45.42,
+        "id": "drone",
+        "price": 24000
+      },
+      {
+        "minutes": 48.67,
+        "id": "root_vac",
+        "price": 26000
+      },
+      {
+        "minutes": 51.5,
+        "id": "bot_dig",
+        "price": 28800
+      },
+      {
+        "minutes": 55.17,
+        "id": "dual_line",
+        "price": 38000
+      },
+      {
+        "minutes": 58.67,
+        "id": "bulk_bag",
+        "price": 42000
+      },
+      {
+        "minutes": 63.17,
+        "id": "bot_auto",
+        "price": 55000
+      },
+      {
+        "minutes": 67.67,
+        "id": "route_ai",
+        "price": 62000
+      },
+      {
+        "minutes": 72.42,
+        "id": "bot_auto",
+        "price": 74250
+      },
+      {
+        "minutes": 77,
+        "id": "sweep",
+        "price": 60000
+      },
+      {
+        "minutes": 81.25,
+        "id": "bot_auto",
+        "price": 99000
+      },
+      {
+        "minutes": 85.75,
+        "id": "industrial",
+        "price": 100000
+      },
+      {
+        "minutes": 91.08,
+        "id": "bot_heavy",
+        "price": 135000
+      },
+      {
+        "minutes": 97.42,
+        "id": "bot_heavy",
+        "price": 182250
+      },
+      {
+        "minutes": 103.92,
+        "id": "factory",
+        "price": 220000
+      }
+    ],
+    "finalMoney": 18973,
+    "grinderEmptyMinutes": 30.18,
+    "hopperFullMinutes": 0.02,
+    "lastThousandMinutes": 0.61,
+    "hand": 329316,
+    "bots": 670684,
+    "tractor": 0,
+    "processed": 1000000
+  }
+]
